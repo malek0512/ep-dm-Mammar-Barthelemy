@@ -1,0 +1,144 @@
+---
+title: "DM évaluation de performance"
+author: "Mammar & Barthelemy"
+date: "Saturday, February 28, 2015"
+output: html_document
+---
+
+L'objectif de ce DM est d'analyser l'importance de la distribution du temps de service sur le temps de réponse dans une file d'attente M/GI/1 avec un ordonnancement LIFO. 
+Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
+Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
+
+
+**Question 1**
+
+Nature des lois de service : 
+Illustrons les differences de natures entre les différentes lois de temps de service : 
+
+
+Simulation de la file LIFO :
+
+```{r}
+set.seed(10)
+library(plyr)
+library(ggplot2)
+
+Service <- function(n=1,typeservice,x,y) {
+# genere un temps de service
+  switch(typeservice,
+         det = rep(1,n),
+         uni = runif(n,x,y),
+         gamma = rgamma(n,shape=x,scale=y),
+         exp = rexp(n,x)
+         )
+}
+
+FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
+    # simulates a M/GI/1 LIFO queue with different preemption policy
+    # parameters:
+    #    n :  total number of jobs
+    #    lambda : arrival rate
+    #    typeservice : service law (det uni gamma exp)
+    #    x ,y : parameters of the service law
+    #    policy: npmtn, pmtn, pmtn_restart, pmtn_reset
+    # return value:
+    #    vector with response time of each task assuming the queue is initially empty
+    
+    A <- rexp(n,lambda)         # inter arrival
+    t1 <- cumsum(A)             # arrival dates
+    t2 <- rep(NA,n)             # completion dates
+    S <- Service(n,typeservice,x,y) # initial service times
+    
+    #### Variables that define the state of the queue
+    t = 0               # current time
+    remaining = rep(NA,n)  # how much work remains to do for each task
+    running = NA        # index of the currently running task
+    waiting = c()       # stack with tasks which have arrived and have not been completed yet
+    next_arrival = 1    # index of the next task to arrive
+    
+    #### A few useful local functions 
+    run_task = function() { # runs the last task of the waiting list
+      #if there is still a process in the stack to run, we take the last one
+      if(length(waiting)>0) {
+        running <<- waiting[length(waiting)]
+        #we update the remaning time : it depends on the politic chosen
+        remaining[running] <<- switch(policy,
+                                      #the process restart from the beginning
+                                      npmtn = S[running],
+                                      
+                                      #At first it takes, S[running], but after remaining[running] is returned
+                                      pmtn = min(S[running],remaining[running],na.rm=T),
+                                      
+                                      #the process restart from the beginning
+                                      pmtn_restart = S[running],
+                                      
+                                      #the process restart with a shorter time
+                                      pmtn_reset = Service(1,typeservice,x,y)
+                                      )
+        waiting <<- waiting[-length(waiting)] #renvoie le tableau privé de l'element a la position length(waiting) => le dernier element empilé
+      }
+    }
+
+    push_task = function() { # insert the next_arrival-th task to the waiting list
+                             # and run it if there is preemption
+      if(policy != "npmtn") {
+        if(!is.na(running)) {waiting <<- c(waiting,running)}
+        running <<- NA
+      }
+      waiting <<- c(waiting,next_arrival)
+      next_arrival <<- next_arrival+1 
+      if(is.na(running)) { run_task() }
+    }
+
+    #### Main simulation loop
+    while(TRUE) { 
+      #dt is the time we will minus the remaning running time process
+      # Look for next event
+      dt = NA
+      #have we reached the number max of processes demands ?
+      if(next_arrival <=n) { dt = min(dt ,(t1[next_arrival]-t), na.rm=T ) } #dt=NA it's a bit akward to take the min with. Notice that t1[next_arrival]-t is the time 
+      #is some process running ?
+      if(!is.na(running))  { dt = min(dt,remaining[running], na.rm=T) }
+      
+      #we've reached the max of processes and no process is running, we take off
+      if(is.na(dt)) { break }
+      
+      # Update state
+      t=t+dt
+      if(!is.na(running)) {
+        remaining[running] = remaining[running] - dt
+        if(remaining[running]<=0) {
+          t2[running] = t
+          running = NA
+          
+          #it begins to run or rerun or resume the process, and affect remain[running] to the time service générated
+          run_task()
+        }
+      }
+      if((next_arrival<=n) & (t==t1[next_arrival])) {
+        push_task()
+      }
+    }
+    
+    t2-t1
+}    
+
+```
+
+
+```{r}
+n = 10
+lambda = 1
+typeservice = "exp"
+x = 1
+y = 10
+policy = "npmtn"
+FileLIFO(n, lambda, typeservice, x, y, policy)
+```
+
+```{r}
+ar = c(1,2,3,4,5,6,7,8)
+dp = c(1,2,3,4,5,6,7)
+ar - dp
+```
+
