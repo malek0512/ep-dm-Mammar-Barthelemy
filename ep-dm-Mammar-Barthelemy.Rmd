@@ -10,12 +10,6 @@ Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
 Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
 
 
-**Question 1**
-
-Nature des lois de service : 
-Illustrons les differences de natures entre les différentes lois de temps de service : 
-
-
 Simulation de la file LIFO :
 
 ```{r}
@@ -55,18 +49,19 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     running = NA        # index of the currently running task
     waiting = c()       # stack with tasks which have arrived and have not been completed yet
     next_arrival = 1    # index of the next task to arrive
+    sys_vide = 1        # by curiosity let count the number of times the system is empty
     
     #### A few useful local functions 
     run_task = function() { # runs the last task of the waiting list
-      #if there is still a process in the stack to run, we take the last one
+      #if there is still a process in the stack to run, we take the last one in
       if(length(waiting)>0) {
         running <<- waiting[length(waiting)]
-        #we update the remaning time : it depends on the politic chosen
+        #we update the remaning time : it depends on the policy chosen
         remaining[running] <<- switch(policy,
                                       #the process restart from the beginning
                                       npmtn = S[running],
                                       
-                                      #At first it takes, S[running], but after remaining[running] is returned
+                                      #At first loop it takes S[running], but after remaining[running] is returned
                                       pmtn = min(S[running],remaining[running],na.rm=T),
                                       
                                       #the process restart from the beginning
@@ -92,15 +87,16 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 
     #### Main simulation loop
     while(TRUE) { 
-      #dt is the time we will minus the remaning running time process
+      #dt is the time we will minus the remaning running process time
       # Look for next event
       dt = NA
-      #have we reached the number max of processes demands ?
-      if(next_arrival <=n) { dt = min(dt ,(t1[next_arrival]-t), na.rm=T ) } #dt=NA it's a bit akward to take the min with. Notice that t1[next_arrival]-t is the time 
-      #is some process running ?
+      #have we reached the number max of process arrival ?
+      if(next_arrival <=n) { dt = min(dt ,(t1[next_arrival]-t), na.rm=T ) } #dt=t1[..]-t it's a bit akward to take the min with dt because NA are deleted. Notice that t1[next_arrival]-t=dt is the next process arrival time - current time. So this is the elapsed time
+      
+      #is some process running ? if so, dt = ramining(running) in case the running process ends before the next process
       if(!is.na(running))  { dt = min(dt,remaining[running], na.rm=T) }
       
-      #we've reached the max of processes and no process is running, we take off
+      #we've reached the max of process (no next arrival) and no process is running, we take off
       if(is.na(dt)) { break }
       
       # Update state
@@ -111,34 +107,91 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
           t2[running] = t
           running = NA
           
-          #it begins to run or rerun or resume the process, and affect remain[running] to the time service générated
+          #it begins to run or rerun or resume the process, and affect remain[running] to the corresponding time service
           run_task()
         }
       }
       if((next_arrival<=n) & (t==t1[next_arrival])) {
-        push_task()
+        push_task() #insert the next_arrival-th task to the waiting list and run it if there is preemption
+      }
+      
+    }
+    
+    #count the nnumer of time the system is empty
+    for(i in 1:n) {
+      if ( t1[i]>t2[i]) {
+        sys_vide = sys_vide + 1
       }
     }
     
-    t2-t1
+    list (jobs = data.frame(arrival = t1, completion=t2, service=t2-t1, theoricService=S),
+#          events = data.frame(date=date,count=count),
+#          workevolution = data.frame(date=datework,work=work),
+          sys_vide = sys_vide)
+    
 }    
 
 ```
 
+**Question 1**
+
+Nature des lois de service : 
+Illustrons les differences de natures entre les différentes lois de temps de service : 
+
+Les lois deterministe et uniforme sont trivials, si ce n'est qu'on peut ajouté que (dans le cas uniforme) les temps sont compris entre 0 et 10 par choix.
+
+Loi exponentielle : 
+
+La plus part des temps de service sont très court (voire proche de zero) et d'autre (un nombre limité) assez long : c'est typique de la distribution exponentielle.
+
+Loi gamma : 
+
+Nous avons choisi un coefficient x=9 afin de s'éloigner de la loi exponentielle (avec x=1) et densité en forme de cloche.
+Comme on peut le voir les temps de service sont $\gt$ 2.5 s
+
 
 ```{r}
-n = 10
-lambda = 1
-typeservice = "exp"
-x = 1
-y = 10
-policy = "npmtn"
-FileLIFO(n, lambda, typeservice, x, y, policy)
+set.seed(10)
+
+
+gamma = data.frame(value=Service(n=100, typeservice="gamma", x=9, y=0.5))
+gamma$id  = 1:length(gamma$value)
+
+unif  = data.frame(value=Service(n=100, typeservice="uni", x=1, y=10))
+unif$id  = 1:length(unif$value)
+
+det   = data.frame(value=Service(n=100, typeservice="det"))
+det$id  = 1:length(det$value)
+
+exp     = data.frame(value=Service(n=100, typeservice="exp", x=1))
+exp$id  = 1:length(exp$value)
+
+
+pdet = ggplot(data=det, aes(x=id, y=value)) + 
+  geom_bar(data=det,stat="identity", position="identity") + 
+  ylab("Time") + xlab("Client") + 
+  ggtitle("Temps de service : loi constante")
+
+punif = ggplot(data=unif, aes(x=id, y=value)) + 
+  geom_bar(data=unif,stat="identity", position="identity") + 
+  ylab("Time") + xlab("Client") + 
+  ggtitle("Temps de service : loi uniforme")
+
+pgamma = ggplot(data=gamma, aes(x=id, y=value)) + 
+  geom_bar(data=gamma,stat="identity", position="identity") + 
+  ylab("Time") + xlab("Client") + 
+  ggtitle("Temps de service : loi gamma")
+
+pexp = ggplot(data=exp, aes(x=id, y=value)) + 
+  geom_bar(data=exp,stat="identity", position="identity") + 
+  ylab("Time") + xlab("Client") + 
+  ggtitle("Temps de service : loi exponentielle")
+
+pdet
+punif
+pgamma
+pexp
+
 ```
 
-```{r}
-ar = c(1,2,3,4,5,6,7,8)
-dp = c(1,2,3,4,5,6,7)
-ar - dp
-```
-
+**Question 2**  -  *Etudions la file M/M/1 - LIFO*
