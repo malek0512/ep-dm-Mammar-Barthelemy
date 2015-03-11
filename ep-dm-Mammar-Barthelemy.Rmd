@@ -2,11 +2,16 @@
 title: "DM évaluation de performance"
 author: "Mammar & Barthelemy"
 date: "Saturday, February 28, 2015"
-output: html_document
+output:
+  html_document:
+    pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
 ---
-Sources : Pour ce DM nous nous sommes inspiré de cette page http://rpubs.com/alegrand/13532
+Sources : Pour ce DM nous nous sommes inspirés de cette page http://rpubs.com/alegrand/13532
 L'objectif de ce DM est d'analyser l'importance de la distribution du temps de service sur le temps de réponse dans une file d'attente M/GI/1 avec un ordonnancement LIFO. 
-Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
+Le processus d'arrivée suit une loi de Poisson de taux \lambda (débit)
 Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
 
 
@@ -32,17 +37,17 @@ Service <- function(n=1,typeservice,x,y) {
 **Question 1**
 
 Nature des lois de service : 
-Illustrons les differences de natures entre les différentes lois de temps de service : 
+Illustrons les différences de natures entre les différentes lois de temps de service : 
 
-Les lois deterministe et uniforme sont trivials, si ce n'est qu'on peut ajouté que (dans le cas uniforme) les temps sont compris entre 0 et 10 par choix.
+Les lois déterministes et uniformes sont triviales, si ce n'est qu'on peut ajouter que (dans le cas uniforme) les temps sont compris entre 0 et 10 par choix.
 
 Loi exponentielle : 
 
-La plus part des temps de service sont très court (voire proche de zero) et d'autre (un nombre limité) assez long : c'est typique de la distribution exponentielle.
+La plupart des temps de service sont très courts (voire proches de zéro) et d'autres (un nombre limité) assez longs : c'est typique de la distribution exponentielle.
 
 Loi gamma : 
 
-Nous avons choisi un coefficient x=9 afin de s'éloigner de la loi exponentielle (avec x=1) et densité en forme de cloche.
+Nous avons choisi un coefficient x=9 afin de nous éloigner de la loi exponentielle (avec x=1) et nous obtenons densité en forme de cloche.
 Comme on peut le voir les temps de service sont $\gt$ 2.5 s
 
 
