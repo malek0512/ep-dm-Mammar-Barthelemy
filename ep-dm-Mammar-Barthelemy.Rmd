@@ -9,6 +9,11 @@ L'objectif de ce DM est d'analyser l'importance de la distribution du temps de s
 Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
 Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
 
+Pour que l'on s'accorde sur les même termes : 
+Le temps de réponse : est le temps entre l'arrivé et le départ d'un processus (R)
+Le temps d'attente  : est le temps durant lequel le processus est préempté (A)
+Le temps de service : est le temps durant lequel le processus s'execute (S)
+Donc R = A + S
 
 Simulation de la file LIFO :
 
@@ -265,4 +270,52 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 La stabilité du système est permise si $1 \frac \mu$
 
+**Question 3** - *Etude de la file M/GI/1 - LIFO*
+
+Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différentes lois proposées et les différents modes de gestion ci-dessus
+
+```{r}
+
+set.seed(10)
+lambda_min  = 0.1
+lambda_max  = 0.95
+step        = 1 #0.05
+n           = 10
+x           = 1
+policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
+
+laws        = c("det", "uni", "exp")
+
+df = data.frame()
+for(law in 1:length(laws)) {
+  for(policy in 1:length(policies)){ 
+    for(lambda in seq(lambda_min, lambda_max, step)) {
+        tmp=FileLIFO(n, lambda, typeservice=law, x, y, policy)$jobs
+        tmp$law = laws[law]
+        tmp$mode = policies[policy]
+        tmp$lambda = lambda
+        tmp$id=1:length(tmp$arrival)
+        df = rbind(df, tmp)
+    }
+  }
+}
+
+df
+
+library(plyr)
+res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(service), serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
+res
+
+ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
+  geom_line(aes(linetype=law)) +
+  geom_point() + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  theme_bw() +
+  facet_wrap(~law) +
+  xlab("lamba") +
+  ylab("Temps de réponse moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+```
 
