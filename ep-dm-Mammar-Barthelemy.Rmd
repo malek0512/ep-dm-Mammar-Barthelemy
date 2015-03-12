@@ -424,6 +424,59 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 ```
 
 
+2tudions de manère plus précise le role de X dans la loi exponentielle :
+
+```{r}
+
+set.seed(10)
+lambda_min  = 0.1
+lambda_max  = 0.95
+step        = 0.05
+lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
+n           = 5000
+policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
+
+laws        = data.frame()
+laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
+laws        = rbind(laws, data.frame(name="exp(5,0)", fun="exp", x=5, y=0))
+laws        = rbind(laws, data.frame(name="exp(0.1 ,0)", fun="exp", x=0.1, y=0))
+
+df = data.frame()
+for(law in 1:nrow(laws)) {
+  for(policy in policies){ 
+    for(lambda in lambdas) {
+        tmp=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)$jobs
+        tmp$mode = policy
+        tmp$lambda = lambda
+        tmp$id=1:length(tmp$arrival)
+        tmp$law = laws[law,]$name
+        df = rbind(df, tmp)
+    }
+  }
+}
+
+library(plyr)
+res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
+
+```
+
+
+```{r}
+ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
+  geom_line() +
+  geom_point() + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  theme_bw() +
+  facet_wrap(~law) +
+  xlab("lambda") +
+  ylab("Temps de réponse moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
+```
+
+
 //TO DELETE
 ```{r}
 mean_service = ddply(df, c("law", "mode", "lambda"), summarize, n = length(theoricService), theoricService=mean(theoricService))
