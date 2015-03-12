@@ -39,23 +39,6 @@ Service <- function(n=1,typeservice,x,y) {
 Nature des lois de service : 
 Illustrons les différences de natures entre les différentes lois de temps de service : 
 
-Les lois déterministes et uniformes sont triviales, si ce n'est qu'on peut ajouter que (dans le cas uniforme) les temps sont compris entre 0 et 10 par choix.
-
-Loi exponentielle : 
-
-La plupart des temps de service sont très courts (voire proches de zéro quand x grandit) et d'autres (un nombre limité) assez longs : c'est typique de la distribution exponentielle. 
-
-
-Loi gamma : 
-
-Nous avons choisi un coefficient x=9 afin de nous éloigner de la loi exponentielle (avec x=1) et nous obtenons densité en forme de cloche (proche d'une loi normale).
-Pour un coefficient \lambda > 0 et k entier la formule devient loi d'Erlang, qui est bien adpatée a la modélisation de centre d'appel :
-
-**TODO** La statistique ERLANG B va nous permettre de déterminer la probabilité de tentative d'appels lors d'une congestion du réseau (probabilité que les N lignes du réseau soient occupées) en fonction de la charge et du nombre de lignes caractérisant le tronçon considéré
-
-Comme on peut le voir les temps de service sont $\gt$ 2.5 s
-Si l'on se penche sur sa densité on remarque bien 
-
 ```{r}
 set.seed(10)
 
@@ -91,6 +74,10 @@ ggplot(data=df, aes(x=id, y=value)) +
 
 ```
 
+Afin de se donner un ordre de coparaison entre les différentes lois, on génère côte à côte les temps de service. 
+Une première remarque est la grandeur d'un certain nombre (limité certes) de temps de service de "gamma(0.2,5)" 
+Intéressons nous de manière plus précise sur chacune des lois :
+
 
 ```{r}
 
@@ -101,12 +88,26 @@ ggplot(data=fun, aes(x=id, y=value)) +
   ylab("Time") + xlab("Client") + 
   ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
 
+```
+
+La loi 
+
+```{r}
+
 fun = df[df$name=="uni(0,2)",]
 ggplot(data=fun, aes(x=id, y=value)) + 
   geom_bar(data=fun,stat="identity", position="identity") + 
   geom_hline(yintercept = mean(fun$value), color="red") +
   ylab("Time") + xlab("Client") + 
   ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+```
+
+Les lois déterministes et uniformes sont triviales.
+Leur moyenne de temps de service est de 1 (~0,90 pour la loi uniforme par manque d'échantillons).
+On peut ajouter que dans le cas uniforme les temps sont compris entre 0 et 2 secondes par choix.
+
+
+```{r}
 
 fun = df[df$name=="exp(1,0)",]
 ggplot(data=fun, aes(x=id, y=value)) + 
@@ -114,6 +115,13 @@ ggplot(data=fun, aes(x=id, y=value)) +
   geom_hline(yintercept = mean(fun$value), color="red") +
   ylab("Time") + xlab("Client") + 
   ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+```
+
+Loi exponentielle : 
+
+La plupart des temps de service sont très courts (voire proches de zéro surtout quand x grandit) et d'autres (un nombre limité) assez longs : c'est typique de la distribution exponentielle. 
+
+```{r}
 
 fun = df[df$name=="gamma(4,0.25)",]
 ggplot(data=fun, aes(x=id, y=value)) + 
@@ -121,6 +129,9 @@ ggplot(data=fun, aes(x=id, y=value)) +
   geom_hline(yintercept = mean(fun$value), color="red") +
   ylab("Time") + xlab("Client") + 
   ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+```
+
+```{r}
 
 fun = df[df$name=="gamma(0.2,5)",]
 ggplot(data=fun, aes(x=id, y=value)) + 
@@ -130,6 +141,27 @@ ggplot(data=fun, aes(x=id, y=value)) +
   ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
 
 ```
+
+Loi gamma : 
+
+Nous avons choisi deux coefficients x={4, 0.25} afin de nous éloigner de la loi exponentielle (avec x=1).
+
+Dans le cas "gamma(4,0.25)"
+```{r}
+var(df[df$name=="gamma(4,0.25)",]$value)
+mean(df[df$name=="gamma(4,0.25)",]$value)
+```
+
+
+Dans le cas "gamma(0.2,5)" : 
+
+```{r}
+var(df[df$name=="gamma(0.2,5)",]$value)
+mean(df[df$name=="gamma(0.2,5)",]$value)
+```
+
+Des temps de service très variables entre 0 et 13. 
+En effet malgré que la moyenne soit de 1, la variance reflète un ecart important des valeurs.
 
 
 
