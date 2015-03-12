@@ -151,7 +151,7 @@ Dans le cas "gamma(4,0.25)"
 var(df[df$name=="gamma(4,0.25)",]$value)
 mean(df[df$name=="gamma(4,0.25)",]$value)
 ```
-
+On constate que la moyenne des temps de service reste à 1 et que les valeurs tournent autour de 0,2 et 3. 
 
 Dans le cas "gamma(0.2,5)" : 
 
@@ -163,6 +163,18 @@ mean(df[df$name=="gamma(0.2,5)",]$value)
 Des temps de service très variables entre 0 et 13. 
 En effet malgré que la moyenne soit de 1, la variance reflète un ecart important des valeurs.
 
+Conclusion : 
+
+Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance différe. Ainsi cela nous permettra de tester le comportement de nos politiques de différentes façons.
+
+```{r}
+diff = ddply(df, c("name"), summarise, mean = mean(value), variance = var(value))
+ggplot(diff, aes(x=name)) + 
+  geom_bar(stat="identity", position="identity", aes(y=mean)) +
+  geom_point(aes(y=variance), size=5, color="red") +
+  geom_line(aes(y=variance))
+
+```
 
 
 **Question 2**  -  *Etudions la file M/M/1 - LIFO*
@@ -279,152 +291,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 ```
 
 
-```{r}
-
-set.seed(10)
-lambda_min  = 0.1
-lambda_max  = 0.95
-step        = 0.05
-n           = 10000
-x           = 1
-y           = 1
-policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
-
-df = data.frame()
-for(policy in policies){ 
-  for(lambda in seq(lambda_min, lambda_max, step)) {
-      route=FileLIFO(n, lambda, typeservice="exp", x, y, policy)
-      tmp=route$jobs
-      tmp$mode = policy
-      tmp$lambda = lambda
-      tmp$id=1:length(tmp$arrival)
-      tmp$n = n
-      tmp$sys_vide = route$sys_vide
-      
-      df = rbind(df, tmp)
-  }
-}
-
-
-df
-
-library(plyr)
-res = ddply(df, c("mode", "lambda", "n", "sys_vide"), summarize, serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
-res
-
-
-```
-
-```{r}
-ggplot(data=res, aes(x = lambda, y = serviceM, color = mode, shape = mode)) + 
-  geom_line() +
-  geom_point() + 
-  geom_errorbar(width = 0.02, aes(x = lambda, y = serviceM, ymin = serviceM - 2 * sd_service/sqrt(n), ymax = serviceM + 2 * sd_service/sqrt(n))) + 
-  geom_vline(xintercept = 1) +
-  geom_hline(yintercept = 1) +
-  theme_bw() +
-  xlab("lamba") +
-  ylab("Temps de service moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de service")
-
-
-ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
-  geom_line() +
-  geom_point() + 
-  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
-  geom_vline(xintercept = 1) +
-  geom_hline(yintercept = 1) +
-  theme_bw() +
-  xlab("lamba") +
-  ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
-```
-
-Ici le temps de service pratique (non théorique) correspond à la somme des temps d'executions d'un processus (restart compris si la politique l'exige).
-Nous poussons l'echantillonage a 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance \alpha=95% soit un \pi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
-Ce que l'on peut dors et déja constater est que les politiques non préemptive (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables comparées à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
-
-Les intervalles de confiance relativement petits, contiennent les temps estimés. Ce qui attestent de la confiance que l'on peut accordé a cette estimation des temps de réponses.
-
-Dans cette question, le débit d'inter arrivé est gourverné par une loi exponentielle (M/M/1) dont par ailleur nous avons pu observé a la question précédente que plus lambda est grand, plus sa courbe de densité est applati contre les axe x, y donc les valeurs aléatoires tirées sont petites.
-Des temps d'inter arrivé plus petit qui génère d'avantage de chevauchement entre processus. Ce qui augmente le temps de réponse en moyenne. 
-
-Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son execution de zéro. 
-Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand \lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
-
-TO ADD
-* Ajouter un mot sur le temps de service 
-* Evolution du de sys vide en fonction de lambda
-```{r}
-library(plyr)
-res = ddply(df[df$law=="exp",], c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
-res
-
-```
-
-* Régression linéaire sur entre la politique et le temps de réponse
-
-
-**Question 3** - *Etude de la file M/GI/1 - LIFO*
-
-Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différentes lois proposées et les différents modes de gestion ci-dessus
-
-```{r}
-
-set.seed(10)
-lambda_min  = 0.1
-lambda_max  = 0.95
-step        = 0.05
-n           = 5000
-policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
-
-laws        = data.frame()
-laws        = rbind(laws, data.frame(name="det(0,0)", fun="det", x=0, y=0))
-laws        = rbind(laws, data.frame(name="uni(0,2)", fun="uni", x=0, y=2))
-laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
-laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
-laws        = rbind(laws, data.frame(name="gamma(O.2,5)", fun="gamma", x=0.2, y=5))
-
-df = data.frame()
-for(law in 1:nrow(laws)) {
-  for(policy in policies){ 
-    for(lambda in seq(lambda_min, lambda_max, step)) {
-        tmp=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)$jobs
-        tmp$mode = policy
-        tmp$lambda = lambda
-        tmp$id=1:length(tmp$arrival)
-        tmp$law = laws[law,]$name
-        df = rbind(df, tmp)
-    }
-  }
-}
-
-df
-
-library(plyr)
-res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
-res
-
-```
-
-
-```{r}
-ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
-  geom_line() +
-  geom_point() + 
-  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
-  geom_vline(xintercept = 1) +
-  geom_hline(yintercept = 1) +
-  theme_bw() +
-  facet_wrap(~law) +
-  xlab("lambda") +
-  ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
-
-```
-
-
-2tudions de manère plus précise le role de X dans la loi exponentielle :
+Etudions de manière plus précise le role de X dans la loi exponentielle :
 
 ```{r}
 
@@ -476,11 +343,182 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 ```
 
+Nous avons testé différents paramètres pour la loi exponentielle générant le temps de service afin de trouver le plus cohérent. Nous pouvons par exemple constater qu'avec un paramètre x trop faible, les temps de service sont trop élevés et les résultats sont difficilement exploitables, tandis que si ils sont trop faibles nous ne pouvons pas déterminer les caractéristiques de chaque politique puisque les requêtes se font rarement en concurrence.
 
-//TO DELETE
+Fixons nous une valeur X = 1
 ```{r}
-mean_service = ddply(df, c("law", "mode", "lambda"), summarize, n = length(theoricService), theoricService=mean(theoricService))
 
-ddply(mean_service, c("law"), summarize, n = length(theoricService), theoricService=mean(theoricService))
+set.seed(10)
+lambda_min  = 0.1
+lambda_max  = 0.95
+lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
+step        = 0.05
+n           = 10000
+x           = 1
+y           = 1
+policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
+
+df = data.frame()
+for(policy in policies){ 
+  for(lambda in lambdas) {
+      route=FileLIFO(n, lambda, typeservice="exp", x, y, policy)
+      tmp=route$jobs
+      tmp$mode = policy
+      tmp$lambda = lambda
+      tmp$id=1:length(tmp$arrival)
+      tmp$n = n
+      tmp$sys_vide = route$sys_vide
+      tmp$sys_interrupted=(tmp$n-tmp$sys_vide)
+      df = rbind(df, tmp)
+  }
+}
+
+
+library(plyr)
+res = ddply(df, c("mode", "lambda", "n", "sys_vide", "sys_interrupted"), summarize, serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
+
 ```
 
+```{r}
+
+ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
+  geom_line() +
+  geom_point() + 
+  geom_point(data=res, aes(x=lambda, y=sys_interrupted, fill=sys_interrupted, pch=21)) + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  theme_bw() +
+  xlab("lamba") +
+  ylab("Temps de réponse moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+```
+
+Ici le temps de service pratique (non théorique) correspond à la somme des temps d'exécutions d'un processus (restart compris si la politique l'exige).
+Nous poussons l'échantillonage a 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance \alpha=95% soit un \pi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
+Ce que l'on peut dors et déja constater est que les politiques non préemptive (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables comparées à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
+
+Les intervalles de confiance relativement petits, contiennent les temps estimés. Ce qui attestent de la confiance que l'on peut accorder a cette estimation des temps de réponses.
+
+Dans cette question, le débit d'inter arrivé est gourverné par une loi exponentielle (M/M/1) dont par ailleur nous avons pu observé à la question précédente que plus lambda est grand, plus sa courbe de densité est applati contre les axe x, y donc les valeurs aléatoires tirées sont petites.
+Des temps d'inter arrivé plus petit qui génère d'avantage de chevauchement entre processus. Ce qui augmente le temps de réponse en moyenne. 
+
+Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son execution de zéro. 
+Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand \lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
+
+TO ADD
+* Ajouter un mot sur le temps de service 
+* Evolution du de sys vide en fonction de lambda
+```{r}
+
+ggplot(res, aes(x=lambda)) + 
+  geom_bar(stat="identity", position="identity", aes(y=sys_interrupted)) 
+  
+```
+
+* Régression linéaire sur entre la politique et le temps de réponse
+
+
+Voyons voir l'évolution du temps de service en fonction  de lambda (dans le cas d'une polituque préemptive) : 
+
+```{r}
+ggplot(data=res, aes(x = lambda, y = serviceM, color = mode, shape = mode)) + 
+  geom_line() +
+  geom_point() + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = serviceM, ymin = serviceM - 2 * sd_service/sqrt(n), ymax = serviceM + 2 * sd_service/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  theme_bw() +
+  xlab("lamba") +
+  ylab("Temps de service moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de service")
+
+```
+
+
+**Question 3** - *Etude de la file M/GI/1 - LIFO*
+
+Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différentes lois proposées et les différents modes de gestion ci-dessus
+
+```{r}
+
+set.seed(10)
+lambda_min  = 0.1
+lambda_max  = 0.95
+lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
+step        = 0.05
+n           = 5000
+policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
+
+laws        = data.frame()
+laws        = rbind(laws, data.frame(name="det(0,0)", fun="det", x=0, y=0))
+laws        = rbind(laws, data.frame(name="uni(0,2)", fun="uni", x=0, y=2))
+laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
+laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
+laws        = rbind(laws, data.frame(name="gamma(O.2,5)", fun="gamma", x=0.2, y=5))
+
+df = data.frame()
+for(law in 1:nrow(laws)) {
+  for(policy in policies){ 
+    for(lambda in lambdas) {
+        tmp=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)$jobs
+        tmp$mode = policy
+        tmp$lambda = lambda
+        tmp$id=1:length(tmp$arrival)
+        tmp$law = laws[law,]$name
+        df = rbind(df, tmp)
+    }
+  }
+}
+
+library(plyr)
+res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
+
+```
+
+
+```{r}
+ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
+  geom_line() +
+  geom_point() + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  theme_bw() +
+  facet_wrap(~law) +
+  xlab("lambda") +
+  ylab("Temps de réponse moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
+```
+
+Maintenant que nous disposons de ces valeurs, étudions les différentes politiques pour chacune des lois proposées.
+Nous remarquons tout d'abord que pour chaque loi, la politique préemptive avec redémarrage est celle qui devient instable le plus rapidement lorsque l'on diminue l'intervalle de temps entre deux arrivées. Cela s'explique de la même manière que lors des précédents tests.
+Nous observons également un comportement similaire de la politique avec préemption et réinitialisation. Bien que l'instabilité du système soit rarement aussi précoce que lors du cas du restart, nous pouvons néanmoins constater une tendance à s'emballer de manière similaire, si ne n'est avec un léger retard. Nous ne détectons cependant pas ce comportement lors de l'utilisation de la loi exponentielle ou de la loi gamma avec des paramètres l'éloignant de la densité de la loi exponentielle. Nous pouvons ainsi en déduire que dès que le temps de service ne suit pas une loi fournissant des temps généralement assez faibles, cette politique est assez sensible au délai entre deux arrivées. Bien que cette politique ne soit pas aussi violente que le restart, plusieurs interruptions de service rendent le temps total d'exécution bien plus important, la réinitialisation se cumulant à chaque reprise de service.
+Enfin, nous avons les politiques restantes. En comparaison aux autres, elles sont bien plus stables sous des conditions similaires et renvoient un temps de réponse moyen bien meilleur que les autres cas.
+
+Option 1: On zoome -> texte à ajouter expliquant les différences entre chacun
+
+
+```{r}
+ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
+  geom_line() +
+  geom_point() + 
+  geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
+  geom_vline(xintercept = 1) +
+  geom_hline(yintercept = 1) +
+  ylim(0,20) + 
+  xlim(0, 1) +
+  theme_bw() +
+  facet_wrap(~law) +
+  xlab("lambda") +
+  ylab("Temps de réponse moyen") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
+```
+
+Option 2: rajkit ->
+
+Nous pouvons donc conclure que les politiques préemptive et non préemptive, où le temps de service initialement donnés ne changent pas, sont bien plus efficaces. En effet, le serveur aura à s'exécuter un temps constant et risque moins de devenir instable lorsque le nombre de demandes augmente.
+Il est cependant à noter que certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début ou un autre point quelconque. En utilisant la politique préemptive, nous courrons donc le risque que les services puissent avoir ce genre d'attitude, augmentant ainsi drastiquement le temps de réponse du serveur.
+Afin d'éviter ce genre de désagréments, la politique non préemptive est plus sécurisée, puisque pour tout service, qu'il puisse être interrompu ou non, le serveur attendra qu'il soit fini avant de rendre la main au premier arrivant. Même si certains risquent d'attendre un peu plus longtemps que lors de la politique préemptive optimiste, nous évitons les cas où le serveur est totalement surchargé.
