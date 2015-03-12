@@ -43,57 +43,95 @@ Les lois déterministes et uniformes sont triviales, si ce n'est qu'on peut ajou
 
 Loi exponentielle : 
 
-La plupart des temps de service sont très courts (voire proches de zéro) et d'autres (un nombre limité) assez longs : c'est typique de la distribution exponentielle.
+La plupart des temps de service sont très courts (voire proches de zéro quand x grandit) et d'autres (un nombre limité) assez longs : c'est typique de la distribution exponentielle. 
+
 
 Loi gamma : 
 
-Nous avons choisi un coefficient x=9 afin de nous éloigner de la loi exponentielle (avec x=1) et nous obtenons densité en forme de cloche.
-Comme on peut le voir les temps de service sont $\gt$ 2.5 s
+Nous avons choisi un coefficient x=9 afin de nous éloigner de la loi exponentielle (avec x=1) et nous obtenons densité en forme de cloche (proche d'une loi normale).
+Pour un coefficient \lambda > 0 et k entier la formule devient loi d'Erlang, qui est bien adpatée a la modélisation de centre d'appel :
 
+**TODO** La statistique ERLANG B va nous permettre de déterminer la probabilité de tentative d'appels lors d'une congestion du réseau (probabilité que les N lignes du réseau soient occupées) en fonction de la charge et du nombre de lignes caractérisant le tronçon considéré
+
+Comme on peut le voir les temps de service sont $\gt$ 2.5 s
+Si l'on se penche sur sa densité on remarque bien 
 
 ```{r}
 set.seed(10)
 
+laws        = data.frame()
+laws        = rbind(laws, data.frame(name="det(0,0)", fun="det", x=0, y=0))
+laws        = rbind(laws, data.frame(name="uni(0,2)", fun="uni", x=0, y=2))
+laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
+laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
+laws        = rbind(laws, data.frame(name="gamma(0.2,5)", fun="gamma", x=0.2, y=5))
 
-gamma = data.frame(value=Service(n=100, typeservice="gamma", x=9, y=0.5))
-gamma$id  = 1:length(gamma$value)
+n = 100
+df = data.frame()
 
-unif  = data.frame(value=Service(n=100, typeservice="uni", x=1, y=10))
-unif$id  = 1:length(unif$value)
-
-det   = data.frame(value=Service(n=100, typeservice="det"))
-det$id  = 1:length(det$value)
-
-exp     = data.frame(value=Service(n=100, typeservice="exp", x=1))
-exp$id  = 1:length(exp$value)
-
-
-pdet = ggplot(data=det, aes(x=id, y=value)) + 
-  geom_bar(data=det,stat="identity", position="identity") + 
-  ylab("Time") + xlab("Client") + 
-  ggtitle("Temps de service : loi constante")
-
-punif = ggplot(data=unif, aes(x=id, y=value)) + 
-  geom_bar(data=unif,stat="identity", position="identity") + 
-  ylab("Time") + xlab("Client") + 
-  ggtitle("Temps de service : loi uniforme")
-
-pgamma = ggplot(data=gamma, aes(x=id, y=value)) + 
-  geom_bar(data=gamma,stat="identity", position="identity") + 
-  ylab("Time") + xlab("Client") + 
-  ggtitle("Temps de service : loi gamma")
-
-pexp = ggplot(data=exp, aes(x=id, y=value)) + 
-  geom_bar(data=exp,stat="identity", position="identity") + 
-  ylab("Time") + xlab("Client") + 
-  ggtitle("Temps de service : loi exponentielle")
-
-pdet
-punif
-pgamma
-pexp
+for (law in 1:nrow(laws)) {
+  tmp = data.frame(value=Service(n, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y))
+  tmp$id  = 1:length(tmp$value)  
+  tmp$name = laws[law,]$name
+  
+  df = rbind(df, tmp)
+}
 
 ```
+
+```{r}
+
+ggplot(data=df, aes(x=id, y=value)) + 
+  geom_bar(data=df,stat="identity", position="identity") + 
+  #geom_hline(yintercept = mean(df$value), color="red") +
+  facet_wrap(~name) +
+  ylab("Time") + xlab("Client") + 
+  ggtitle("Temps de service")
+
+
+```
+
+
+```{r}
+
+fun = df[df$name=="det(0,0)",]
+ggplot(data=fun, aes(x=id, y=value)) + 
+  geom_bar(data=fun,stat="identity", position="identity") + 
+  geom_hline(yintercept = mean(fun$value), color="red") +
+  ylab("Time") + xlab("Client") + 
+  ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+
+fun = df[df$name=="uni(0,2)",]
+ggplot(data=fun, aes(x=id, y=value)) + 
+  geom_bar(data=fun,stat="identity", position="identity") + 
+  geom_hline(yintercept = mean(fun$value), color="red") +
+  ylab("Time") + xlab("Client") + 
+  ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+
+fun = df[df$name=="exp(1,0)",]
+ggplot(data=fun, aes(x=id, y=value)) + 
+  geom_bar(data=fun,stat="identity", position="identity") + 
+  geom_hline(yintercept = mean(fun$value), color="red") +
+  ylab("Time") + xlab("Client") + 
+  ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+
+fun = df[df$name=="gamma(4,0.25)",]
+ggplot(data=fun, aes(x=id, y=value)) + 
+  geom_bar(data=fun,stat="identity", position="identity") + 
+  geom_hline(yintercept = mean(fun$value), color="red") +
+  ylab("Time") + xlab("Client") + 
+  ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+
+fun = df[df$name=="gamma(0.2,5)",]
+ggplot(data=fun, aes(x=id, y=value)) + 
+  geom_bar(data=fun,stat="identity", position="identity") + 
+  geom_hline(yintercept = mean(fun$value), color="red") +
+  ylab("Time") + xlab("Client") + 
+  ggtitle(paste("Temps de service", as.character(fun[1,]$name), sep=" : "))
+
+```
+
+
 
 **Question 2**  -  *Etudions la file M/M/1 - LIFO*
 
@@ -121,8 +159,9 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     waiting = c()       # stack with tasks which have arrived and have not been completed yet
     next_arrival = 1    # index of the next task to arrive
     sys_vide = 0        # by curiosity let's count the number of times the system is empty
+    sys_interrupted = 0 # by curiosity let's count the number of times the system is interrupted
     used = rep(0, n)    # by curiosity let's count the total of time used by a process (including its restart)
-    interrupted = data.frame()  # by curiosity let's save the preemptions for counting them later
+    #interrupted = data.frame()  # by curiosity let's save the preemptions for counting them later
     
     #### A few useful local functions 
     run_task = function() { # runs the last task of the waiting list
@@ -152,7 +191,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
       if(policy != "npmtn") {
         if(!is.na(running)) {
           waiting <<- c(waiting,running) #it stacks the current process, if t==t1[next_arrival]
-          interrupted = rbind(interrupted, data.frame(id=running, when=t, remaining=remaining[running]))
+          #interrupted = rbind(interrupted, data.frame(id=running, when=t, remaining=remaining[running]))
         }
         running <<- NA
       }
@@ -202,11 +241,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     }
     
     list (jobs = data.frame(arrival = t1, completion=t2, service=used, theoricService=S, response=(t2-t1)), 
-#          events = data.frame(date=date,count=count),
-#          workevolution = data.frame(date=datework,work=work),
-          sys_vide = sys_vide,
-          preemptions=interrupted)
-    
+          sys_vide = sys_vide)
 }    
 
 ```
@@ -220,15 +255,20 @@ lambda_max  = 0.95
 step        = 0.05
 n           = 10000
 x           = 1
+y           = 1
 policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
 
 df = data.frame()
-for(policy in 1:length(policies)){ 
+for(policy in policies){ 
   for(lambda in seq(lambda_min, lambda_max, step)) {
-      tmp=FileLIFO(n, lambda, typeservice="exp", x, y, policy)$jobs
-      tmp$mode = policies[policy]
+      route=FileLIFO(n, lambda, typeservice="exp", x, y, policy)
+      tmp=route$jobs
+      tmp$mode = policy
       tmp$lambda = lambda
       tmp$id=1:length(tmp$arrival)
+      tmp$n = n
+      tmp$sys_vide = route$sys_vide
+      
       df = rbind(df, tmp)
   }
 }
@@ -237,7 +277,7 @@ for(policy in 1:length(policies)){
 df
 
 library(plyr)
-res = ddply(df, c("mode", "lambda"), summarize, n = length(service), serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
+res = ddply(df, c("mode", "lambda", "n", "sys_vide"), summarize, serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
 res
 
 
@@ -268,7 +308,30 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
 ```
 
-La stabilité du système est permise si $1 \frac \mu$
+Ici le temps de service pratique (non théorique) correspond à la somme des temps d'executions d'un processus (restart compris si la politique l'exige).
+Nous poussons l'echantillonage a 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance \alpha=95% soit un \pi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
+Ce que l'on peut dors et déja constater est que les politiques non préemptive (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables comparées à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
+
+Les intervalles de confiance relativement petits, contiennent les temps estimés. Ce qui attestent de la confiance que l'on peut accordé a cette estimation des temps de réponses.
+
+Dans cette question, le débit d'inter arrivé est gourverné par une loi exponentielle (M/M/1) dont par ailleur nous avons pu observé a la question précédente que plus lambda est grand, plus sa courbe de densité est applati contre les axe x, y donc les valeurs aléatoires tirées sont petites.
+Des temps d'inter arrivé plus petit qui génère d'avantage de chevauchement entre processus. Ce qui augmente le temps de réponse en moyenne. 
+
+Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son execution de zéro. 
+Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand \lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
+
+TO ADD
+* Ajouter un mot sur le temps de service 
+* Evolution du de sys vide en fonction de lambda
+```{r}
+library(plyr)
+res = ddply(df[df$law=="exp",], c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
+res
+
+```
+
+* Régression linéaire sur entre la politique et le temps de réponse
+
 
 **Question 3** - *Etude de la file M/GI/1 - LIFO*
 
@@ -279,22 +342,26 @@ Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différent
 set.seed(10)
 lambda_min  = 0.1
 lambda_max  = 0.95
-step        = 1 #0.05
-n           = 10
-x           = 1
+step        = 0.05
+n           = 5000
 policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
 
-laws        = c("det", "uni", "exp")
+laws        = data.frame()
+laws        = rbind(laws, data.frame(name="det(0,0)", fun="det", x=0, y=0))
+laws        = rbind(laws, data.frame(name="uni(0,2)", fun="uni", x=0, y=2))
+laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
+laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
+laws        = rbind(laws, data.frame(name="gamma(O.2,5)", fun="gamma", x=0.2, y=5))
 
 df = data.frame()
-for(law in 1:length(laws)) {
-  for(policy in 1:length(policies)){ 
+for(law in 1:nrow(laws)) {
+  for(policy in policies){ 
     for(lambda in seq(lambda_min, lambda_max, step)) {
-        tmp=FileLIFO(n, lambda, typeservice=law, x, y, policy)$jobs
-        tmp$law = laws[law]
-        tmp$mode = policies[policy]
+        tmp=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)$jobs
+        tmp$mode = policy
         tmp$lambda = lambda
         tmp$id=1:length(tmp$arrival)
+        tmp$law = laws[law,]$name
         df = rbind(df, tmp)
     }
   }
@@ -303,18 +370,32 @@ for(law in 1:length(laws)) {
 df
 
 library(plyr)
-res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(service), serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
+res = ddply(df, c("law", "mode", "lambda"), summarize, n = length(response), responseM=mean(response), sd_response=sd(response))
 res
 
+```
+
+
+```{r}
 ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
-  geom_line(aes(linetype=law)) +
+  geom_line() +
   geom_point() + 
   geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
   geom_vline(xintercept = 1) +
   geom_hline(yintercept = 1) +
   theme_bw() +
   facet_wrap(~law) +
-  xlab("lamba") +
+  xlab("lambda") +
   ylab("Temps de réponse moyen") +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
 ```
+
+
+//TO DELETE
+```{r}
+mean_service = ddply(df, c("law", "mode", "lambda"), summarize, n = length(theoricService), theoricService=mean(theoricService))
+
+ddply(mean_service, c("law"), summarize, n = length(theoricService), theoricService=mean(theoricService))
+```
+
