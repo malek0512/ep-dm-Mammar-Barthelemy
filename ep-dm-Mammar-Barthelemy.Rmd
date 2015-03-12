@@ -5,15 +5,15 @@ date: "Saturday, February 28, 2015"
 output: html_document
 ---
 
-Sources : Pour ce DM nous nous sommes inspiré de cette page http://rpubs.com/alegrand/13532
+Sources : Pour ce DM nous nous sommes inspirés de cette page http://rpubs.com/alegrand/13532
 L'objectif de ce DM est d'analyser l'importance de la distribution du temps de service sur le temps de réponse dans une file d'attente M/GI/1 avec un ordonnancement LIFO. 
 Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
 Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
 
 Pour que l'on s'accorde sur les mêmes termes : 
-Le temps de réponse : est le temps entre l'arrivé et le départ d'un processus (noté R)
-Le temps d'attente  : est le temps durant lequel le processus est préempté (noté A)
-Le temps de service : est le temps durant lequel le processus s'execute (noté S). Donc dans le cas d'une politique restart, ce temps peut être plus grand que le temps généré aléatoirement
+Le temps de réponse : est le temps entre l'arrivée et le départ d'un processus (noté R)
+Le temps d’attente : est le temps durant lequel le processus est préempté (noté A)
+Le temps de service : est le temps durant lequel le processus s'exécute (noté S). Donc dans le cas d'une politique restart, ce temps peut être plus grand que le temps généré aléatoirement
 Ainsi on aurait R = A + S
 
 Simulation de la file LIFO :
@@ -75,9 +75,9 @@ ggplot(data=df, aes(x=id, y=value)) +
 
 ```
 
-Afin de se donner un ordre de comparaison entre les différentes lois, on génère côte à côte les temps de service. 
+Afin de se donner un ordre de comparaison entre les différentes lois, on génère côte à côte les temps de service.
 Une première remarque est la grandeur d'un certain nombre (limité certes) de temps de service de "gamma(0.2,5)" 
-Intéressons nous de manière plus précise sur chacune des lois :
+Intéressons-nous de manière plus précise à chacune des lois :
 
 
 ```{r}
@@ -161,13 +161,13 @@ mean(df[df$name=="gamma(0.2,5)",]$value)
 ```
 
 Des temps de service très variables entre 0 et 13 seconde. 
-En effet malgré que la moyenne soit de 1, la variance reflète un écart important des valeurs.
+En effet malgré la moyenne de 1, la variance reflète un écart important des valeurs.
 
 Conclusion : 
 
-Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance différe. Ainsi cela nous permettra de tester le comportement et la robustesse de nos politiques.
+Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance diffère. Ainsi cela nous permettra de tester le comportement et la robustesse de nos politiques.
 
-Voici un schema résumant la moyenne des temps de service (en bare) mais aussi leur variabilité.
+Voici un schéma résumant la moyenne des temps de service (en barre) mais aussi leur variabilité.
 
 
 ```{r}
@@ -294,7 +294,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 ```
 
 
-Etudions de manière plus précise le role de X dans la loi exponentielle :
+Etudions de manière plus précise le rôle de X dans la loi exponentielle :
 
 ```{r}
 
@@ -346,7 +346,7 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 ```
 
-Nous avons testé différents paramètres pour la loi exponentielle générant le temps de service afin de trouver le plus cohérent. Nous pouvons par exemple constater qu'avec un paramètre x trop faible, les temps de service sont trop élevés et les résultats sont difficilement exploitables, tandis que si ils sont trop faibles nous ne pouvons pas déterminer les caractéristiques de chaque politique puisque les requêtes se font rarement en concurrence.
+Nous avons testé différents paramètres pour la loi exponentielle générant le temps de service afin de trouver le plus cohérent. Nous pouvons par exemple constater qu'avec un paramètre x trop faible, les temps de service sont trop élevés et les résultats sont difficilement exploitables, tandis que s’ils sont trop faibles nous ne pouvons pas déterminer les caractéristiques de chaque politique puisque les requêtes se font rarement en concurrence.
 
 Fixons nous une valeur X = 1
 ```{r}
@@ -397,18 +397,18 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 ```
 
 
-Nous poussons l'échantillonage à 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance alpha=95% soit un phi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
+Nous poussons l'échantillonnage à 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petits avec un degré de confiance alpha=95% soit un phi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
 
-Ce que l'on peut dors et déja constater est que les politiques (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables ontrairement à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
+Nous pouvons d’ores et déjà constater que les politiques (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables contrairement à pmtn_restart dont le temps de réponse explose quand le débit d'inter arrivée tend vers 1.
 
-Les intervalles de confiance relativement petits, contiennent les temps estimés. Ce qui attestent de la confiance que l'on peut accorder a cette estimation des temps de réponses.
+Les intervalles de confiance relativement petits contiennent les temps estimés. Cela atteste de la confiance que l'on peut accorder à cette estimation des temps de réponses.
 
-Dans cette question, le débit d'inter arrivé est gourverné par une loi exponentielle (M/M/1) dont par ailleur nous avons pu observé à la question précédente que plus lambda est grand, plus sa courbe de densité est applati contre les axe x, y donc les valeurs aléatoires tirées sont petites.
-Des temps d'inter arrivé plus petit qui génère d'avantage de chevauchement entre processus. Ce qui augmente le temps de réponse en moyenne. 
+Dans cette question, le débit d'inter arrivé est gouverné par une loi exponentielle (M/M/1) dont nous avons pu observer par ailleurs à la question précédente que plus lambda est grand, plus sa courbe de densité est aplatie contre les axes x, y donc les valeurs aléatoires tirées sont petites.
+Des temps d'inter arrivée plus petits génèrent davantage de chevauchements entre processus. Cela augmente le temps de réponse en moyenne. 
 
-Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son execution de zéro. 
+Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son exécution à partir de zéro. 
 
-Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
+Si l'on observe le nombre de fois qu'un processus est préempté en moyenne quand lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
 
 ```{r}
 #mean = ddply(res, c("lambda"), summarize, sys_int= mean(sys_interrupted))
@@ -476,8 +476,11 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 ```
 
 Maintenant que nous disposons de ces valeurs, étudions les différentes politiques pour chacune des lois proposées.
-Nous remarquons tout d'abord que pour chaque loi, la politique préemptive avec redémarrage est celle qui devient instable le plus rapidement lorsque l'on diminue l'intervalle de temps entre deux arrivées. Cela s'explique de la même manière que lors des précédents tests.
+
+Nous remarquons tout d'abord que pour chaque loi, la politique préemptive avec redémarrage est celle qui devient instable le plus rapidement lorsque l'on diminue l'intervalle de temps entre deux arrivées. Cela s'explique de la même manière que lors des précédents tests, la durée de service réelle est bien plus grande que la durée d'exécution théorique.
+
 Nous observons également un comportement similaire de la politique avec préemption et réinitialisation. Bien que l'instabilité du système soit rarement aussi précoce que lors du cas du restart, nous pouvons néanmoins constater une tendance à s'emballer de manière similaire, si ne n'est avec un léger retard. Nous ne détectons cependant pas ce comportement lors de l'utilisation de la loi exponentielle ou de la loi gamma avec des paramètres l'éloignant de la densité de la loi exponentielle. Nous pouvons ainsi en déduire que dès que le temps de service ne suit pas une loi fournissant des temps généralement assez faibles, cette politique est assez sensible au délai entre deux arrivées. Bien que cette politique ne soit pas aussi violente que le restart, plusieurs interruptions de service rendent le temps total d'exécution bien plus important, la réinitialisation se cumulant à chaque reprise de service.
+
 Enfin, nous avons les politiques restantes. En comparaison aux autres, elles sont bien plus stables sous des conditions similaires et renvoient un temps de réponse moyen bien meilleur que les autres cas.
 
 Zoomons un peu plus afin de mieux voir les différences entre chaque mode
@@ -499,9 +502,24 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 ```
 
+Nous constatons alors que pour presque toutes les lois, le mode non préemptif est légèrement plus rapide que les autres. Néanmoins, l'évolution de la stabilité de ces deux politiques est dans ce cas très similaire pour chaque mode.
+
+Nous pouvons nous pencher cependant sur le cas de l'utilisation de la loi gamma avec des paramètres la différenciant de la loi exponentielle. Rappelons nous, dans ce mode d'exécution, la variance du temps de service est très grande. Nous voyons dans ce cas que le mode non préemptif est clairement moins efficace que le préemptif. Le mode non préemptif nous permet d'avoir des temps de réponse très rapides lorsque le serveur traite notre requête assez rapidement, cependant, certaines peuvent être mises en attente pour un temps très long, les nouveaux arrivants ayant la priorité.
+
+Nous pouvons alors supposer que dans les premiers cas (type de service uniforme, etc..), les mises en attente des processus ne contrebalançaient pas la vitesse des processus entrant, tandis que dans le second cas, certains attendaient assez pour augmenter le temps de réponse moyen de manière significative.
+
+Cela peut s'expliquer par le fait que certaines requêtes sont bien plus longues à réaliser que d'autres. Ainsi, durant son traitement, une longue requête peut recevoir plusieurs demandes durant son temps de service. La toute première demande devra alors attendre la fin de l'exécution de tous les autres processus ayant fait une demande après lui. Le temps de réponse moyen est donc augmenté par ces cas où le serveur met beaucoup plus de temps à répondre.
+
+Nous pouvons également noter lors de l'utilisation de cette version de la loi gamma que la politique reset est incroyablement efficace. Cela s'explique également par cette forte variance: un service, qui à la base devrait durer très longtemps, peut être interrompu puis repris avec un temps bien inférieur à celui qui lui était prévu. Le temps de réponse moyen est alors amélioré.
+
 
 Conclusion : 
 
-Nous pouvons donc conclure que les politiques préemptive et non préemptive où le temps de service initialement donnés ne changent pas, sont bien plus efficaces. En effet, le serveur aura à s'exécuter un temps constant et risque moins de devenir instable lorsque le nombre de demandes augmente.
-Il est cependant à noter que certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début ou un autre point quelconque. En utilisant la politique préemptive, nous courrons donc le risque que les services puissent avoir ce genre d'attitude, augmentant ainsi drastiquement le temps de réponse du serveur.
+Nous pouvons donc conclure que les politiques préemptive et non préemptivesont généralement les plus efficaces. le temps de traitement pour un nombre donné de requêtes est constant, ce qui est donc bien plus efficace. En effet, le serveur aura tendance à s'exécuter un temps précis et risque donc moins de devenir instable.
+
+Cependant, plaçons nous dans une situations réelle. Certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début ou un autre point quelconque. En utilisant la politique préemptive, nous courrons donc le risque que les services puissent avoir ce genre d'attitude, augmentant ainsi drastiquement le temps de réponse du serveur.
+
 Afin d'éviter ce genre de désagréments, la politique non préemptive est plus sécurisée, puisque pour tout service, qu'il puisse être interrompu ou non, le serveur attendra qu'il soit fini avant de rendre la main au premier arrivant. Même si certains risquent d'attendre un peu plus longtemps que lors de la politique préemptive optimiste, nous évitons les cas où le serveur est totalement surchargé.
+
+Nous pouvons également favoriser une autre politique, qui dans certains cas peut être plus utile. Lorsque les temps de service sont élevés, le fait d'interrompre puis réinitialiser le service aura des chances d'améliorer son temps de traitement, rendant alors cette politique la plus efficace de toutes.
+
