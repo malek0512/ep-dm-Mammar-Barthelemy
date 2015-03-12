@@ -4,16 +4,17 @@ author: "Mammar & Barthelemy"
 date: "Saturday, February 28, 2015"
 output: html_document
 ---
+
 Sources : Pour ce DM nous nous sommes inspiré de cette page http://rpubs.com/alegrand/13532
 L'objectif de ce DM est d'analyser l'importance de la distribution du temps de service sur le temps de réponse dans une file d'attente M/GI/1 avec un ordonnancement LIFO. 
 Le processus d'arrivée est un processus de Poisson de taux \lambda (débit)
 Les clients ont un temps de service de moyenne 1 pris comme unité de temps de référence.
 
-Pour que l'on s'accorde sur les même termes : 
-Le temps de réponse : est le temps entre l'arrivé et le départ d'un processus (R)
-Le temps d'attente  : est le temps durant lequel le processus est préempté (A)
-Le temps de service : est le temps durant lequel le processus s'execute (S)
-Donc R = A + S
+Pour que l'on s'accorde sur les mêmes termes : 
+Le temps de réponse : est le temps entre l'arrivé et le départ d'un processus (noté R)
+Le temps d'attente  : est le temps durant lequel le processus est préempté (noté A)
+Le temps de service : est le temps durant lequel le processus s'execute (noté S). Donc dans le cas d'une politique restart, ce temps peut être plus grand que le temps généré aléatoirement
+Ainsi on aurait R = A + S
 
 Simulation de la file LIFO :
 
@@ -74,7 +75,7 @@ ggplot(data=df, aes(x=id, y=value)) +
 
 ```
 
-Afin de se donner un ordre de coparaison entre les différentes lois, on génère côte à côte les temps de service. 
+Afin de se donner un ordre de comparaison entre les différentes lois, on génère côte à côte les temps de service. 
 Une première remarque est la grandeur d'un certain nombre (limité certes) de temps de service de "gamma(0.2,5)" 
 Intéressons nous de manière plus précise sur chacune des lois :
 
@@ -90,7 +91,6 @@ ggplot(data=fun, aes(x=id, y=value)) +
 
 ```
 
-La loi 
 
 ```{r}
 
@@ -151,7 +151,7 @@ Dans le cas "gamma(4,0.25)"
 var(df[df$name=="gamma(4,0.25)",]$value)
 mean(df[df$name=="gamma(4,0.25)",]$value)
 ```
-On constate que la moyenne des temps de service reste à 1 et que les valeurs tournent autour de 0,2 et 3. 
+On constate que la moyenne des temps de service reste à 1 et que les valeurs tournent autour de 0,2 et 3 secondes. 
 
 Dans le cas "gamma(0.2,5)" : 
 
@@ -160,12 +160,15 @@ var(df[df$name=="gamma(0.2,5)",]$value)
 mean(df[df$name=="gamma(0.2,5)",]$value)
 ```
 
-Des temps de service très variables entre 0 et 13. 
-En effet malgré que la moyenne soit de 1, la variance reflète un ecart important des valeurs.
+Des temps de service très variables entre 0 et 13 seconde. 
+En effet malgré que la moyenne soit de 1, la variance reflète un écart important des valeurs.
 
 Conclusion : 
 
-Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance différe. Ainsi cela nous permettra de tester le comportement de nos politiques de différentes façons.
+Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance différe. Ainsi cela nous permettra de tester le comportement et la robustesse de nos politiques.
+
+Voici un schema résumant la moyenne des temps de service (en bare) mais aussi leur variabilité.
+
 
 ```{r}
 diff = ddply(df, c("name"), summarise, mean = mean(value), variance = var(value))
@@ -384,7 +387,6 @@ res = ddply(df, c("mode", "lambda", "n", "sys_vide", "sys_interrupted"), summari
 ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
   geom_line() +
   geom_point() + 
-  geom_point(data=res, aes(x=lambda, y=sys_interrupted, fill=sys_interrupted, pch=21)) + 
   geom_errorbar(width = 0.02, aes(x = lambda, y = responseM, ymin = responseM - 2 * sd_response/sqrt(n), ymax = responseM + 2 * sd_response/sqrt(n))) + 
   geom_vline(xintercept = 1) +
   geom_hline(yintercept = 1) +
@@ -394,9 +396,10 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
 ```
 
-Ici le temps de service pratique (non théorique) correspond à la somme des temps d'exécutions d'un processus (restart compris si la politique l'exige).
-Nous poussons l'échantillonage a 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance \alpha=95% soit un \pi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
-Ce que l'on peut dors et déja constater est que les politiques non préemptive (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables comparées à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
+
+Nous poussons l'échantillonage à 10 000 arrivées afin d'obtenir une courbe lissée et de conserver des intervalles de confiance petit avec un dégré de confiance alpha=95% soit un phi(95%) = qnorm(0,95 - (1-0,95)/2) ~ 2.
+
+Ce que l'on peut dors et déja constater est que les politiques (npmtn), resume (pmtn), et reset (avec un autre temps de service : pmnt) sont stables ontrairement à pmtn_restart dont le temps de réponse explose quand le debit d'inter arrivé tend vers 1.
 
 Les intervalles de confiance relativement petits, contiennent les temps estimés. Ce qui attestent de la confiance que l'on peut accorder a cette estimation des temps de réponses.
 
@@ -404,22 +407,20 @@ Dans cette question, le débit d'inter arrivé est gourverné par une loi expone
 Des temps d'inter arrivé plus petit qui génère d'avantage de chevauchement entre processus. Ce qui augmente le temps de réponse en moyenne. 
 
 Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son execution de zéro. 
-Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand \lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
 
-TO ADD
-* Ajouter un mot sur le temps de service 
-* Evolution du de sys vide en fonction de lambda
+Si l'on observe le nombre de fois qu'en moyenne un processus est préempté quand lambda augmente, il n'est guère étonnant que la politique "restart" soit instable
+
 ```{r}
-
-ggplot(res, aes(x=lambda)) + 
-  geom_bar(stat="identity", position="identity", aes(y=sys_interrupted)) 
-  
+#mean = ddply(res, c("lambda"), summarize, sys_int= mean(sys_interrupted))
+ggplot(data=res, aes(x=lambda) )+
+  geom_point(aes (y=(sys_interrupted), colour=(sys_interrupted), shape=mode)) +
+  geom_smooth(data=res, (aes(y=sys_interrupted)), method="lm")
+#geom_smooth(data=mean, (aes(y=sys_int)), method="lm")
 ```
 
-* Régression linéaire sur entre la politique et le temps de réponse
 
 
-Voyons voir l'évolution du temps de service en fonction  de lambda (dans le cas d'une polituque préemptive) : 
+Voyons voir l'évolution du temps de service en fonction  de lambda (dans le cas d'une politique préemptive) : 
 
 ```{r}
 ggplot(data=res, aes(x = lambda, y = serviceM, color = mode, shape = mode)) + 
@@ -497,8 +498,7 @@ Nous remarquons tout d'abord que pour chaque loi, la politique préemptive avec 
 Nous observons également un comportement similaire de la politique avec préemption et réinitialisation. Bien que l'instabilité du système soit rarement aussi précoce que lors du cas du restart, nous pouvons néanmoins constater une tendance à s'emballer de manière similaire, si ne n'est avec un léger retard. Nous ne détectons cependant pas ce comportement lors de l'utilisation de la loi exponentielle ou de la loi gamma avec des paramètres l'éloignant de la densité de la loi exponentielle. Nous pouvons ainsi en déduire que dès que le temps de service ne suit pas une loi fournissant des temps généralement assez faibles, cette politique est assez sensible au délai entre deux arrivées. Bien que cette politique ne soit pas aussi violente que le restart, plusieurs interruptions de service rendent le temps total d'exécution bien plus important, la réinitialisation se cumulant à chaque reprise de service.
 Enfin, nous avons les politiques restantes. En comparaison aux autres, elles sont bien plus stables sous des conditions similaires et renvoient un temps de réponse moyen bien meilleur que les autres cas.
 
-Option 1: On zoome -> texte à ajouter expliquant les différences entre chacun
-
+Zoomons un peu plus afin de mieux voir les différences entre chaque mode
 
 ```{r}
 ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
@@ -517,8 +517,9 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 ```
 
-Option 2: rajkit ->
 
-Nous pouvons donc conclure que les politiques préemptive et non préemptive, où le temps de service initialement donnés ne changent pas, sont bien plus efficaces. En effet, le serveur aura à s'exécuter un temps constant et risque moins de devenir instable lorsque le nombre de demandes augmente.
+Conclusion : 
+
+Nous pouvons donc conclure que les politiques préemptive et non préemptive où le temps de service initialement donnés ne changent pas, sont bien plus efficaces. En effet, le serveur aura à s'exécuter un temps constant et risque moins de devenir instable lorsque le nombre de demandes augmente.
 Il est cependant à noter que certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début ou un autre point quelconque. En utilisant la politique préemptive, nous courrons donc le risque que les services puissent avoir ce genre d'attitude, augmentant ainsi drastiquement le temps de réponse du serveur.
 Afin d'éviter ce genre de désagréments, la politique non préemptive est plus sécurisée, puisque pour tout service, qu'il puisse être interrompu ou non, le serveur attendra qu'il soit fini avant de rendre la main au premier arrivant. Même si certains risquent d'attendre un peu plus longtemps que lors de la politique préemptive optimiste, nous évitons les cas où le serveur est totalement surchargé.
