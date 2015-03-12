@@ -419,24 +419,6 @@ ggplot(data=res, aes(x=lambda) )+
 ```
 
 
-
-Voyons voir l'évolution du temps de service en fonction  de lambda (dans le cas d'une politique préemptive) : 
-
-```{r}
-ggplot(data=res, aes(x = lambda, y = serviceM, color = mode, shape = mode)) + 
-  geom_line() +
-  geom_point() + 
-  geom_errorbar(width = 0.02, aes(x = lambda, y = serviceM, ymin = serviceM - 2 * sd_service/sqrt(n), ymax = serviceM + 2 * sd_service/sqrt(n))) + 
-  geom_vline(xintercept = 1) +
-  geom_hline(yintercept = 1) +
-  theme_bw() +
-  xlab("lamba") +
-  ylab("Temps de service moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de service")
-
-```
-
-
 **Question 3** - *Etude de la file M/GI/1 - LIFO*
 
 Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différentes lois proposées et les différents modes de gestion ci-dessus
