@@ -1,7 +1,7 @@
 ---
 title: "DM évaluation de performance"
 author: "Mammar & Barthelemy"
-date: "Saturday, February 28, 2015"
+date: "Saturday, March 14, 2015"
 output: html_document
 ---
 
@@ -19,6 +19,7 @@ Ainsi on aurait R = A + S
 Simulation de la file LIFO :
 
 ```{r}
+options(warn=-1)
 set.seed(10)
 library(plyr)
 library(ggplot2)
@@ -35,7 +36,8 @@ Service <- function(n=1,typeservice,x,y) {
 
 ```
 
-**Question 1**
+#Question 1
+##Nature des lois de service
 
 Nature des lois de service : 
 Illustrons les différences de natures entre les différentes lois de temps de service : 
@@ -163,7 +165,7 @@ mean(df[df$name=="gamma(0.2,5)",]$value)
 Des temps de service très variables entre 0 et 13 seconde. 
 En effet malgré la moyenne de 1, la variance reflète un écart important des valeurs.
 
-Conclusion : 
+**Conclusion** 
 
 Dans l'ensemble, la moyenne des temps de service générés est autour de 1. Seule leur variance diffère. Ainsi cela nous permettra de tester le comportement et la robustesse de nos politiques.
 
@@ -180,7 +182,8 @@ ggplot(diff, aes(x=name)) +
 ```
 
 
-**Question 2**  -  *Etudions la file M/M/1 - LIFO*
+#Question 2
+##Etude détaillée de la file M/M/1 - LIFO
 
 ```{r}
 FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
@@ -342,7 +345,7 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   facet_wrap(~law) +
   xlab("lambda") +
   ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+  ggtitle("Influence du taux d'arrivée (lambda) sur le temps de réponse")
 
 ```
 
@@ -393,7 +396,7 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   theme_bw() +
   xlab("lamba") +
   ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+  ggtitle("Influence du taux d'arrivée (lambda) sur le temps de réponse")
 ```
 
 
@@ -403,7 +406,7 @@ Nous pouvons d’ores et déjà constater que les politiques (npmtn), resume (pm
 
 Les intervalles de confiance relativement petits contiennent les temps estimés. Cela atteste de la confiance que l'on peut accorder à cette estimation des temps de réponses.
 
-Dans cette question, le débit d'inter arrivé est gouverné par une loi exponentielle (M/M/1) dont nous avons pu observer par ailleurs à la question précédente que plus lambda est grand, plus sa courbe de densité est aplatie contre les axes x, y donc les valeurs aléatoires tirées sont petites.
+Dans cette question, le débit d'inter arrivée est gouverné par une loi exponentielle (M/M/1) dont nous avons pu observer par ailleurs à la question précédente que plus lambda est grand, plus sa courbe de densité est aplatie contre les axes x, y donc les valeurs aléatoires tirées sont petites.
 Des temps d'inter arrivée plus petits génèrent davantage de chevauchements entre processus. Cela augmente le temps de réponse en moyenne. 
 
 Avoir la courbe pmtn_restart qui explose est prévisible, puisque chaque processus préempté recommence son exécution à partir de zéro. 
@@ -419,7 +422,7 @@ ggplot(data=res, aes(x=lambda) )+
   geom_smooth(data=res, (aes(y=sys_interrupted)), method="lm")+
   xlab("Lambda") +
   ylab("Le nombre de préemptions") +
-  ggtitle("Le nombre de préemptions selon le débit d'inter arrivé (lambda) ")
+  ggtitle("Le nombre de préemptions selon le débit d'inter arrivée (lambda) ")
 
 ```
 
@@ -427,7 +430,8 @@ Par ce graphe nous montrons la relation entre le débit d'inter arrivée et le n
 Nous observons ainsi une régression linéaire qui indique une proportionnalité entre ces deux variables. 
 
 
-**Question 3** - *Etude de la file M/GI/1 - LIFO*
+#Question 3
+##Étude de la file M/GI/1 − LIFO
 
 Traçons le temps moyen de réponse en fonction de $\lambda$ pour les différentes lois proposées et les différents modes de gestion ci-dessus
 
@@ -446,7 +450,7 @@ laws        = rbind(laws, data.frame(name="det(0,0)", fun="det", x=0, y=0))
 laws        = rbind(laws, data.frame(name="uni(0,2)", fun="uni", x=0, y=2))
 laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
 laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
-laws        = rbind(laws, data.frame(name="gamma(O.2,5)", fun="gamma", x=0.2, y=5))
+laws        = rbind(laws, data.frame(name="gamma(0.2,5)", fun="gamma", x=0.2, y=5))
 
 df = data.frame()
 for(law in 1:nrow(laws)) {
@@ -479,19 +483,23 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   facet_wrap(~law) +
   xlab("lambda") +
   ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+  ggtitle("Influence du taux d'arrivée (lambda) sur le temps de réponse")
 
 ```
 
 Maintenant que nous disposons de ces valeurs, étudions les différentes politiques pour chacune des lois proposées.
 
-Nous remarquons tout d'abord que pour chaque loi, la politique préemptive avec redémarrage est celle qui devient instable le plus rapidement lorsque l'on diminue l'intervalle de temps entre deux arrivées. Cela s'explique de la même manière que lors des précédents tests, la durée de service réelle est bien plus grande que la durée d'exécution théorique.
+Nous remarquons tout d’abord que pour chaque loi, la politique préemptive avec redémarrage est celle qui devient instable le plus rapidement lorsque l’on diminue l’intervalle de temps entre deux arrivées. Cela s’explique de la même manière que lors des précédents tests, la durée de service réelle est bien plus grande que la durée d’exécution théorique.
 
-Nous observons également un comportement similaire de la politique avec préemption et réinitialisation. Bien que l'instabilité du système soit rarement aussi précoce que lors du cas du restart, nous pouvons néanmoins constater une tendance à s'emballer de manière similaire, si ne n'est avec un léger retard. Nous ne détectons cependant pas ce comportement lors de l'utilisation de la loi exponentielle ou de la loi gamma avec des paramètres l'éloignant de la densité de la loi exponentielle. Nous pouvons ainsi en déduire que dès que le temps de service ne suit pas une loi fournissant des temps généralement assez faibles, cette politique est assez sensible au délai entre deux arrivées. Bien que cette politique ne soit pas aussi violente que le restart, plusieurs interruptions de service rendent le temps total d'exécution bien plus important, la réinitialisation se cumulant à chaque reprise de service.
+Nous observons également un comportement similaire de la politique avec préemption et réinitialisation (reset) . Bien que l’instabilité du système soit rarement aussi précoce que lors du cas du restart, nous pouvons néanmoins constater une tendance à s’emballer de manière similaire, si ne n’est avec un léger retard. Nous ne détectons cependant pas ce comportement lors de l’utilisation de la loi exponentielle ou de la loi gamma avec des paramètres augmentant la variance. 
 
-Enfin, nous avons les politiques restantes. En comparaison aux autres, elles sont bien plus stables sous des conditions similaires et renvoient un temps de réponse moyen bien meilleur que les autres cas.
+Nous pouvons en déduire que l’efficacité de cette politique dépend beaucoup de la variance du temps de service. Quand le délai inter arrivée est très faible (lambda tend vers 1), si le temps de service a tendance à être grand alors on se rapproche de la courbe du restart. A contrario si le temps de service a tendance à être petit, même si le système fait face à certaines exceptions dont le temps de service est très grand, on se rapproche d'une croissance du temps de réponse nulle.
+Or dans la question 1 nous avons remarqué que les temps de service générés par la loi gamma(0.2, 5) sont majoritairement très proche de 0 : la moyenne étant centré sur 1, certains temps de service étant de 17 ou 14 secondes sont très minoritaires.
+Ainsi la plupart des processus ont le temps de se terminer, tandis que les gros se font préempter jusqu'à qu'ils soient suffisamment courts. Cela au final accélère le traitement.
 
-Zoomons un peu plus afin de mieux voir les différences entre chaque mode
+Enfin, nous avons les politiques restantes (npmtn, pmtn). En comparaison aux autres, elles sont bien plus stables sous des conditions similaires et renvoient un temps de réponse moyen bien meilleur que les autres cas.
+
+Zoomons un peu plus afin de mieux voir les différences entre chaque mode.
 
 ```{r}
 ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
@@ -506,28 +514,32 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   facet_wrap(~law) +
   xlab("lambda") +
   ylab("Temps de réponse moyen") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+  ggtitle("Influence du taux d'arrivée (lambda) sur le temps de réponse")
 
 ```
 
-Nous constatons alors que pour presque toutes les lois, le mode non préemptif est légèrement plus rapide que les autres. Néanmoins, l'évolution de la stabilité de ces deux politiques est dans ce cas très similaire pour chaque mode.
+Nous constatons alors que pour presque toutes les lois, le mode non préemptif est légèrement plus rapide que les autres. 
+Néanmoins, l'évolution de la stabilité des politiques préemptive (pmtn) et non préemptive (npmtn) est dans ce cas très similaire pour chaque mode. 
 
-Nous pouvons nous pencher cependant sur le cas de l'utilisation de la loi gamma avec des paramètres la différenciant de la loi exponentielle. Rappelons nous, dans ce mode d'exécution, la variance du temps de service est très grande. Nous voyons dans ce cas que le mode non préemptif est clairement moins efficace que le préemptif. Le mode non préemptif nous permet d'avoir des temps de réponse très rapides lorsque le serveur traite notre requête assez rapidement, cependant, certaines peuvent être mises en attente pour un temps très long, les nouveaux arrivants ayant la priorité.
 
-Nous pouvons alors supposer que dans les premiers cas (type de service uniforme, etc..), les mises en attente des processus ne contrebalançaient pas la vitesse des processus entrant, tandis que dans le second cas, certains attendaient assez pour augmenter le temps de réponse moyen de manière significative.
+Nous pouvons nous pencher cependant sur le cas de l'utilisation de la loi gamma avec des paramètres la différenciant de la loi exponentielle. Rappelons nous, dans ce mode d'exécution, la variance du temps de service est très grande. Nous voyons dans ce cas que le mode non préemptif est clairement moins efficace que le préemptif. Le mode non préemptif nous permet d'avoir des temps de réponse très rapides lorsque le serveur traite notre requête assez rapidement, cependant, certaines peuvent être mises en attente pour un temps très long si de nouveaux arrivants apparaissent avant la fin du traitement en cours. 
+
+Nous pouvons alors supposer que lors de l’utilisation des lois hormis gamma(0.2, 5), les mises en attente des processus en non préemptif (nptmn) ne contrebalançaient pas la vitesse des processus entrant, tandis que dans le second cas (gamma(0.2, 5)), certains attendaient assez pour augmenter le temps de réponse moyen de manière significative.
 
 Cela peut s'expliquer par le fait que certaines requêtes sont bien plus longues à réaliser que d'autres. Ainsi, durant son traitement, une longue requête peut recevoir plusieurs demandes durant son temps de service. La toute première demande devra alors attendre la fin de l'exécution de tous les autres processus ayant fait une demande après lui. Le temps de réponse moyen est donc augmenté par ces cas où le serveur met beaucoup plus de temps à répondre.
 
-Nous pouvons également noter lors de l'utilisation de cette version de la loi gamma que la politique reset est incroyablement efficace. Cela s'explique également par cette forte variance: un service, qui à la base devrait durer très longtemps, peut être interrompu puis repris avec un temps bien inférieur à celui qui lui était prévu. Le temps de réponse moyen est alors amélioré.
+
+**Conclusion** 
+
+Nous pouvons donc conclure que la politique préemptive (pmtn), avec reprise de l'exécution du processus à l'état où il fut interrompu, est généralement plus efficace que les autres politiques. Sa courbe conserve une même allure indépendemment de lambda et du temps de service. 
+En effet, le serveur aura tendance à s’exécuter un temps précis et risque donc moins de devenir instable.
+
+Cependant, plaçons nous dans une situations réelle. Certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début (avec un temps identique ou nouveau). 
+
+En utilisant la politique préemptive (pmtn) avec reprise du processus à l'état où il avait était laissé, on pré suppose une capacité du serveur à pouvoir mémoriser l'état de chaque requête. Sans compter la complexité de la mise d'un tel système à état, le crash d'un tel serveur nécessiterait un temps de redémarrage important. 
+Aussi la non idempotence des réponses suggère une mauvaise tolérance aux pannes.
 
 
-Conclusion : 
+Afin d'éviter ce genre de désagréments, la politique non préemptive est plus sécurisée, puisque pour tout service, le serveur attendra qu'il soit fini avant de rendre la main. Même si certains risquent d'attendre un peu plus longtemps que lors de la politique préemptive optimiste, nous évitons les cas où le serveur est totalement surchargé.
 
-Nous pouvons donc conclure que les politiques préemptive et non préemptivesont généralement les plus efficaces. le temps de traitement pour un nombre donné de requêtes est constant, ce qui est donc bien plus efficace. En effet, le serveur aura tendance à s'exécuter un temps précis et risque donc moins de devenir instable.
-
-Cependant, plaçons nous dans une situations réelle. Certains services ne bénéficient pas tous du luxe de pouvoir être interrompus sans avoir à redémarrer la requête depuis le début ou un autre point quelconque. En utilisant la politique préemptive, nous courrons donc le risque que les services puissent avoir ce genre d'attitude, augmentant ainsi drastiquement le temps de réponse du serveur.
-
-Afin d'éviter ce genre de désagréments, la politique non préemptive est plus sécurisée, puisque pour tout service, qu'il puisse être interrompu ou non, le serveur attendra qu'il soit fini avant de rendre la main au premier arrivant. Même si certains risquent d'attendre un peu plus longtemps que lors de la politique préemptive optimiste, nous évitons les cas où le serveur est totalement surchargé.
-
-Nous pouvons également favoriser une autre politique, qui dans certains cas peut être plus utile. Lorsque les temps de service sont élevés, le fait d'interrompre puis réinitialiser le service aura des chances d'améliorer son temps de traitement, rendant alors cette politique la plus efficace de toutes.
-
+Nous pouvons également favoriser une autre politique (pmtn_reset), qui dans certains cas peut être plus utile. Lorsque les temps de service sont élevés dans de très rares cas et que la plupart des temps de service sont très courts, le fait d'interrompre puis réinitialiser le service aura des chances d'améliorer son temps de traitement, rendant alors cette politique la plus efficace de toutes.
