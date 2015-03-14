@@ -423,7 +423,7 @@ ggplot(data=res, aes(x=lambda) )+
 
 ```
 
-Par ce graphe nous montrons la relation entre le débit d'inter arrivé et le nombre de préemption qui dépend indirectement du temps de service.
+Par ce graphe nous montrons la relation entre le débit d'inter arrivée et le nombre de préemptions qui dépend indirectement du temps de service.
 Nous observons ainsi une régression linéaire qui indique une proportionnalité entre ces deux variables. 
 
 
