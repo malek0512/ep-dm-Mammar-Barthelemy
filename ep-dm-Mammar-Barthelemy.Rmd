@@ -412,11 +412,19 @@ Si l'on observe le nombre de fois qu'un processus est préempté en moyenne quan
 
 ```{r}
 #mean = ddply(res, c("lambda"), summarize, sys_int= mean(sys_interrupted))
+#geom_smooth(data=mean, (aes(y=sys_int)), method="lm")
+res = res[res$mode != "npmtn",] #la maniere dont on compte le nombre de fois que le système est vide, font que les valeurs pour ce mode sont non significatives. En effet dans un diagramme d'exectution toute les requêtes se font à la suite.
 ggplot(data=res, aes(x=lambda) )+
   geom_point(aes (y=(sys_interrupted), colour=(sys_interrupted), shape=mode)) +
-  geom_smooth(data=res, (aes(y=sys_interrupted)), method="lm")
-#geom_smooth(data=mean, (aes(y=sys_int)), method="lm")
+  geom_smooth(data=res, (aes(y=sys_interrupted)), method="lm")+
+  xlab("Lambda") +
+  ylab("Le nombre de préemptions") +
+  ggtitle("Le nombre de préemptions selon le débit d'inter arrivé (lambda) ")
+
 ```
+
+Par ce graphe nous montrons la relation entre le débit d'inter arrivé et le nombre de préemption qui dépend indirectement du temps de service.
+Nous observons ainsi une régression linéaire qui indique une proportionnalité entre ces deux variables. 
 
 
 **Question 3** - *Etude de la file M/GI/1 - LIFO*
