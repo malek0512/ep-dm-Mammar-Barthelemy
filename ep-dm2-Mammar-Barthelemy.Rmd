@@ -36,7 +36,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     #    policy: npmtn, pmtn, pmtn_restart, pmtn_reset
     # return value:
     #    vector with response time of each task assuming the queue is initially empty
-    
+    set.seed(10)                #in order to have the same time service each call with the same lambda, x, y
     A <- rexp(n,lambda)         # inter arrival
     t1 <- cumsum(A)             # arrival dates
     t2 <- rep(NA,n)             # completion dates
@@ -53,68 +53,56 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     used = rep(0, n)    # by curiosity let's count the total of time used by a process (including its restart)
     #interrupted = data.frame()  # by curiosity let's save the preemptions for counting them later
     
-    #return the waiting index of the process with a minimum remaining time
-    get_the_min_index = function (stack, remaining) {
-      min = NA
-      min_index = NA
-      for(i in 1:length(stack)) {
-        process = stack[i]
-        
-        if ( is.na(min) ) {
-          min = remaining[process]
-          min_index = i
-        }
-        
-        #ATTENTION A MIEUX COMPRENDRE PK REMAINING PEUT VALOIR NA
-        if ( ! is.na(remaining[process]) && min < remaining[process] ) {
-          min = remaining[process]
-          min_index = i
-        }
-      }
-      return (min_index)
-    }
     
     #### A few useful local functions 
     run_task = function() { # runs the last task of the waiting list
       #if there is still a process in the stack to run, we take the last one in
       if(length(waiting)>0) {
-        index = get_the_min_index(waiting, remaining)
-        running <<- waiting[index] #it unstacks the process with the shortest remaining time
+        index = length(waiting)
+        running = waiting[index] #it unstacks the last process received to update its remainning time
+        #At first loop it takes S[running], but after remaining[running] is returned
+        remaining[running] <<- min(S[running],remaining[running],na.rm=T)
         
-        #ATTENTION CA N'A PEUT ETRE PLUS TROP DE SENS SI LE REMAINNING TIME EST MIS A JOUR A UNE VALEUR PLUS GRANDE, CAR IL NE SERA CERTAINEMENT PLUS LE MIN DANS LE CAS D'UNE POLITIQUE TELLE QUE RESET
-#MON IDÉE EST DE PRENDRE LE PROCESS DANS LA LISTE D'ATTENTE AVEC LE PLUS PETIT REMAINING TIME. DONC LES PROCESS ARRIVE TJRS DANS L'ORDRE DANS LEQUEL ILS SONT PROGRAMME (GÉNÉRÉ).
-
-        #we update the remaning time : it depends on the policy chosen
-        remaining[running] <<- switch(policy,
-                                      #the process start from the beginning
-                                      npmtn = S[running],
-                                      
-                                      #At first loop it takes S[running], but after remaining[running] is returned
-                                      pmtn = min(S[running],remaining[running],na.rm=T),
-                                      
-                                      #the process restart from the beginning
-                                      pmtn_restart = S[running],
-                                      
-                                      #the process restart with another time
-                                      pmtn_reset = Service(1,typeservice,x,y)
-                                      )
+        #return the waiting index of the process with a minimum remaining time > 0 : depending on the policy chosen
+        switch(policy,
+                        srpt_npmtn = 
+                          { #we elect the min between the new and current request by comparing their remaining time
+                            if (remaining[waiting[index-1]] <= remaining[waiting[index]]) 
+                              index = (index - 1)
+                          },
+                       
+                        spt_npmtn = 
+                          { #we elect the min between the new and current request by comparing their service time
+                            if (S[waiting[index-1]] <= S[waiting[index]]) 
+                            index = (index - 1)
+                          },
+                       
+                        spt = 
+                          { #we elect the first shortest remaining time process, among all the waiting processes
+                            min_process = which(remaining==min(remaining[remaining>0], na.rm=T))
+                            index = (which(waiting == min_process))[1]
+                          }
+                )
+        running <<- waiting[index]        
         waiting <<- waiting[-index] #renvoie le tableau privé de l'element a la position index 
       }
     }
 
     push_task = function() { # insert the next_arrival-th task to the waiting list
                              # and run it if there is preemption
-      if(policy != "npmtn") {
+      if(policy != "spt") {
         #It is preemptif
         if(!is.na(running)) {
+          #if a process is running, we stack him because we are in preemption mode, and then stack also the next arrival. 
           waiting <<- c(waiting,running) #it stacks the current process, if t==t1[next_arrival]
           #interrupted = rbind(interrupted, data.frame(id=running, when=t, remaining=remaining[running]))
         }
-        running <<- NA
+        running <<- NA #We set it to NA as if no process is running
       }
+      #preemptif or not we stack the next arrival
       waiting <<- c(waiting,next_arrival)
       next_arrival <<- next_arrival+1 
-      if(is.na(running)) { run_task() }
+      if(is.na(running)) { run_task() } #if it was preemtpif let run the next arrival, by unstack it
     }
 
     #### Main simulation loop
@@ -125,7 +113,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
       #have we reached the number max of process arrival ?
       if(next_arrival <=n) { dt = min(dt ,(t1[next_arrival]-t), na.rm=T ) } #dt=t1[..]-t it's a bit akward to take the min with dt because NA are deleted. Notice that t1[next_arrival]-t=dt is the next process arrival time - current time. So this is the elapsed time
       
-      #is some process running ? if so, we finish executing it if its remainning time is lower than the delta time of the next arrival
+      #is some process running ? if so, we finish executing it if its remaining time is lower than the delta time of the next arrival
       if(!is.na(running))  { dt = min(dt,remaining[running], na.rm=T) }
       
       #we've reached the max of process (no next arrival) and no process is running, we take off
@@ -133,19 +121,23 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
       
       # Update state
       t=t+dt
-      if(!is.na(running)) {
+      if(!is.na(running)) { 
+        # if a process is running, we subtract him dt time
         remaining[running] = remaining[running] - dt
         used[running] = used[running] + dt
         if(remaining[running]<=0) {
+          #if the process is finished, we note the finish time
           t2[running] = t
           running = NA
           
-          #it unstacks the last process and it launchs it depending on the policy chosen (resume, restart, restart with lower time), and affect remain[running] to the corresponding time service
+          #the process is finished, it unstacks the last process and it launchs it depending on the policy chosen (resume, restart, restart with lower time), and affect remaining[running] to the corresponding time service
           run_task()
         }
       }
+      
       if((next_arrival<=n) & (t==t1[next_arrival])) {
-        push_task() #insert the next_arrival-th task to the waiting list and run it if there is preemption
+        #if this is time for the next arrival
+        push_task() #insert the next_arrival task to the waiting list and run it if there is preemption
       }
       
     }
@@ -164,12 +156,6 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 ```
 
 
-```{r}
-    
-
-get_the_shortest(c(-11,3,4,-1))
-```
-
 Fixons nous une valeur X = 1
 ```{r}
 
@@ -178,10 +164,10 @@ lambda_min  = 0.1
 lambda_max  = 0.95
 lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
 step        = 0.05
-n           = 10000
-x           = 1
+n           = 1000
+x           = 0.1
 y           = 1
-policies    = c("npmtn","pmtn", "pmtn_restart", "pmtn_reset")
+policies    = c("srpt_pmtn","spt_pmtn", "spt")
 
 df = data.frame()
 for(policy in policies){ 
