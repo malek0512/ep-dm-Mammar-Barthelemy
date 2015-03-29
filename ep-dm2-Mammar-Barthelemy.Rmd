@@ -6,8 +6,10 @@ output: html_document
 ---
 Simulation de la file LIFO :
 
+**Question 1**  -  *Etudions la file M/M/1 - LIFO*
+
+
 ```{r}
-set.seed(10)
 library(plyr)
 library(ggplot2)
 
@@ -21,11 +23,6 @@ Service <- function(n=1,typeservice,x,y) {
          )
 }
 
-```
-
-**Question 2**  -  *Etudions la file M/M/1 - LIFO*
-
-```{r}
 FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     # simulates a M/GI/1 LIFO queue with different preemption policy
     # parameters:
@@ -65,16 +62,20 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
         
         #return the waiting index of the process with a minimum remaining time > 0 : depending on the policy chosen
         switch(policy,
-                        srpt_npmtn = 
+                        srpt_pmtn = 
                           { #we elect the min between the new and current request by comparing their remaining time
-                            if (remaining[waiting[index-1]] <= remaining[waiting[index]]) 
-                              index = (index - 1)
+                            if (index >= 2) { 
+                              if (remaining[waiting[index-1]] <= remaining[waiting[index]]) 
+                                index = (index - 1)
+                            }
                           },
                        
-                        spt_npmtn = 
+                        spt_pmtn = 
                           { #we elect the min between the new and current request by comparing their service time
-                            if (S[waiting[index-1]] <= S[waiting[index]]) 
-                            index = (index - 1)
+                            if (index >= 2) { 
+                              if (S[waiting[index-1]] <= S[waiting[index]]) 
+                              index = (index - 1)
+                            }
                           },
                        
                         spt = 
@@ -164,8 +165,8 @@ lambda_min  = 0.1
 lambda_max  = 0.95
 lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
 step        = 0.05
-n           = 1000
-x           = 0.1
+n           = 10000
+x           = 1
 y           = 1
 policies    = c("srpt_pmtn","spt_pmtn", "spt")
 
