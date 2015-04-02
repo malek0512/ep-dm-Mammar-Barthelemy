@@ -8,7 +8,11 @@ Simulation de la file LIFO :
 
 **Question 1**  -  *Modification du code pour une politique SRPT*
 
+<<<<<<< HEAD
 Nous avons essentiellement modifié la fonction run_task() qui désormais depile une tâche selon l'une des 4 politiques srptpmtn, sptpmtn, spt, et fifo passéé en paramètre.
+=======
+Nous avons essentiellement modifié la fonction run_task() qui désormais depile une tâche selon l'une des 4 politiques srpt_pmtn, spt_pmtn, spt, et fifo passéé en paramètre.
+>>>>>>> 4e2f847275405692b514ddb834147322b1f0ec09
 Aussi afin que les comparaisons entre les différentes politiques soient les plus précises possibles, nous avons initialis& le germe aléatoire set.seed(10) au début de la fonction FileLIFO. Ceci à pour conséquence que les dates d'arrivées et de service sont identique a chaque appelle de la fonction pour des paramètres identiques.
 
 ```{r}
@@ -91,7 +95,6 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
                             if (index >= 1)
                               index = 1
                           }
-                    
                 )
         running <<- waiting[index]        
         waiting <<- waiting[-index] #renvoie le tableau privé de l'element a la position index 
