@@ -6,8 +6,10 @@ output: html_document
 ---
 Simulation de la file LIFO :
 
-**Question 1**  -  *Etudions la file M/M/1 - LIFO*
+**Question 1**  -  *Modification du code pour une politique SRPT*
 
+Nous avons essentiellement modifié la fonction run_task() qui désormais depile une tâche selon l'une des 4 politiques srptpmtn, sptpmtn, spt, et fifo passéé en paramètre.
+Aussi afin que les comparaisons entre les différentes politiques soient les plus précises possibles, nous avons initialis& le germe aléatoire set.seed(10) au début de la fonction FileLIFO. Ceci à pour conséquence que les dates d'arrivées et de service sont identique a chaque appelle de la fonction pour des paramètres identiques.
 
 ```{r}
 library(plyr)
@@ -82,7 +84,14 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
                           { #we elect the first shortest remaining time process, among all the waiting processes
                             min_process = which(remaining==min(remaining[remaining>0], na.rm=T))
                             index = (which(waiting == min_process))[1]
+                          },
+                        
+                        fifo = 
+                          { #we elect the first arrived
+                            if (index >= 1)
+                              index = 1
                           }
+                    
                 )
         running <<- waiting[index]        
         waiting <<- waiting[-index] #renvoie le tableau privé de l'element a la position index 
@@ -156,8 +165,10 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 
 ```
 
+**Question 2** - *Evaluons les performances, en temps de réponse, des différentes stratégies SPRT à la politique FIFO*
 
-Fixons nous une valeur X = 1
+Pour une loi exponentielle fixons nous une valeur X = 1
+
 ```{r}
 
 set.seed(10)
@@ -168,7 +179,7 @@ step        = 0.05
 n           = 10000
 x           = 1
 y           = 1
-policies    = c("srpt_pmtn","spt_pmtn", "spt")
+policies    = c("srpt_pmtn","spt_pmtn", "spt", "fifo")
 
 df = data.frame()
 for(policy in policies){ 
@@ -203,4 +214,39 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   xlab("lamba") +
   ylab("Temps de réponse moyen") +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+```
+
+
+**Question 3** - *Etudions la distribution du temps de réponse et en particulier les valeurs extrêmes*
+
+Afin d'accentuer l'apparition des pics des temps réponse nous choississons une valeur lambda > au débit crête.
+Au vu du graphe de la question 2, nous prenons un Lambda de 0.8
+
+```{r}
+
+ggplot(data=df[df$lambda==0.8,], aes(x = id)) + 
+  geom_bar(stat="identity", position="identity", aes(y=response)) + 
+  theme_bw() +
+  xlab("id") +
+  facet_wrap(~mode) + 
+  ylab("Temps de réponse") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
+```
+
+Rappelons que cces stratégies sont évaluées sur la base d'un même flux de requêtes entrant.
+Sur cette figure nous pouvons remarquer la précense de valeurs extrêmes sur pratiquement chacun des modes.
+
+La politique Fifo traite les requetes dans l'ordre d'arrivé. On constate que ces extremums sont modérés
+
+
+```{r}
+
+ggplot(data=df[df$lambda==0.8,], aes(x = id, color = mode, shape = mode)) + 
+  geom_bar(stat="identity", position="identity", aes(y=response)) + 
+  theme_bw() +
+  xlab("id") +
+  ylab("Temps de réponse") +
+  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+
 ```
