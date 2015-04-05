@@ -30,7 +30,7 @@ Service <- function(n=1,typeservice,x,y) {
          )
 }
 
-FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
+FileLIFO <- function(n,lambda,typeservice,x,y,policy,seed=10) {
     # simulates a M/GI/1 LIFO queue with different preemption policy
     # parameters:
     #    n :  total number of jobs
@@ -40,7 +40,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     #    policy: npmtn, pmtn, pmtn_restart, pmtn_reset
     # return value:
     #    vector with response time of each task assuming the queue is initially empty
-    set.seed(10)                #in order to have the same time service each call with the same lambda, x, y
+    set.seed(seed)                #in order to have the same time service each call with the same lambda, x, y
     A <- rexp(n,lambda)         # inter arrival
     t1 <- cumsum(A)             # arrival dates
     t2 <- rep(NA,n)             # completion dates
@@ -203,7 +203,6 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 
 ```{r}
 
-set.seed(10)
 lambda_min  = 0.1
 lambda_max  = 0.95
 lambdas     = c(.2, .4, .6, .8) #seq(lambda_min, lambda_max, step)
@@ -220,9 +219,9 @@ laws        = rbind(laws, data.frame(name="gamma(0.2,5)", fun="gamma", x=0.2, y=
 
 df = data.frame()
 for(law in 1:nrow(laws)) {
-  for(policy in policies){ 
     for(lambda in lambdas) {
-        route=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)
+      for(policy in policies){ 
+        route=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy, seed=floor(lambda*10))
         tmp=route$jobs
         tmp$mode = policy
         tmp$lambda = lambda
@@ -232,7 +231,7 @@ for(law in 1:nrow(laws)) {
         tmp$sys_vide = route$sys_vide
         tmp$sys_interrupted=(tmp$n-tmp$sys_vide)
         df = rbind(df, tmp)
-    }
+     }
   }
 }
 
@@ -257,6 +256,37 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
 
 
 **Question 3** - *Etudions la distribution du temps de réponse et en particulier les valeurs extrêmes*
+
+Fixons nous a la loi gamma qui distincte bien les courbes entre elles.
+
+>>>>>>----------------- TO DELETE -----------------------------------------
+Estimons la valeur débit crête : 
+
+```{r}
+library(plyr)
+res2 = ddply(df, c("law", "mode", "lambda", "n"), summarize, responseM= 1/mean(response))
+
+```
+
+
+```{r}
+#mean = ddply(res, c("lambda"), summarize, sys_int= mean(sys_interrupted))
+#geom_smooth(data=mean, (aes(y=sys_int)), method="lm")
+reg = res2[res2$law=="gamma(0.2,5)" & res2$mode=="fifo",]
+coef(lm(data=reg, reg$responseM ~ reg$lambda))
+
+ggplot(data=res2, aes(x=lambda) )+
+  geom_point(aes (y=responseM, colour=responseM, shape=mode)) +
+  geom_smooth(data=res2, (aes(y=responseM)), method="lm")+
+  facet_wrap(~mode) +
+  xlab("Lambda") +
+  ylab("Le nombre de préemptions") +
+  ggtitle("Le nombre de préemptions selon le débit d'inter arrivée (lambda) ")
+
+```
+
+<<<<<----------------- TO DELETE -----------------------------------------
+
 
 Afin d'accentuer l'apparition des pics des temps réponse nous choississons une valeur lambda > au débit crête.
 Au vu du graphe de la question 2, nous prenons un Lambda de 0.8
