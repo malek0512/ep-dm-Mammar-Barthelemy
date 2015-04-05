@@ -8,16 +8,17 @@ Simulation de la file LIFO :
 
 **Question 1**  -  *Modification du code pour une politique SRPT*
 
-<<<<<<< HEAD
 Nous avons essentiellement modifié la fonction run_task() qui désormais depile une tâche selon l'une des 4 politiques srptpmtn, sptpmtn, spt, et fifo passéé en paramètre.
-=======
-Nous avons essentiellement modifié la fonction run_task() qui désormais depile une tâche selon l'une des 4 politiques srpt_pmtn, spt_pmtn, spt, et fifo passéé en paramètre.
->>>>>>> 4e2f847275405692b514ddb834147322b1f0ec09
-Aussi afin que les comparaisons entre les différentes politiques soient les plus précises possibles, nous avons initialis& le germe aléatoire set.seed(10) au début de la fonction FileLIFO. Ceci à pour conséquence que les dates d'arrivées et de service sont identique a chaque appelle de la fonction pour des paramètres identiques.
 
+Aussi afin que les comparaisons entre les différentes politiques soient les plus précises possibles, nous avons initialis& le germe aléatoire set.seed(10) au début de la fonction FileLIFO. Ceci à pour conséquence que les dates d'arrivées et de service sont identique a chaque appelle de la fonction pour des paramètres identiques.
 ```{r}
+#Libraries
 library(plyr)
 library(ggplot2)
+
+```
+
+```{r}
 
 Service <- function(n=1,typeservice,x,y) {
 # genere un temps de service
@@ -49,23 +50,34 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
     t = 0               # current time
     remaining = rep(NA,n)  # how much work remains to do for each task
     running = NA        # index of the currently running task
-    waiting = c()       # stack with tasks which have arrived and have not been completed yet
+    waiting = c()       # stack with tasks which have arrived or have not been completed yet
     next_arrival = 1    # index of the next task to arrive
     sys_vide = 0        # by curiosity let's count the number of times the system is empty
     sys_interrupted = 0 # by curiosity let's count the number of times the system is interrupted
     used = rep(0, n)    # by curiosity let's count the total of time used by a process (including its restart)
-    #interrupted = data.frame()  # by curiosity let's save the preemptions for counting them later
+    waiting_length = rep(NA,n)  # by curiosity let's save the preemptions for counting them later
     
     
     #### A few useful local functions 
     run_task = function() { # runs the last task of the waiting list
       #if there is still a process in the stack to run, we take the last one in
+    
       if(length(waiting)>0) {
+      
+    #print("arrivals")
+    #print(t1)
+
         index = length(waiting)
-        running = waiting[index] #it unstacks the last process received to update its remainning time
-        #At first loop it takes S[running], but after remaining[running] is returned
-        remaining[running] <<- min(S[running],remaining[running],na.rm=T)
-        
+        #waiting_length[next_arrival-1] <<- index
+        last_request = waiting[index] #it unstacks the last process received to update its remainning time
+        #At first affectation it takes S[running], but after remaining[running] is returned
+        remaining[last_request] <<- min(S[last_request],remaining[last_request],na.rm=T)
+
+        #print("index") 
+        #print(length(waiting))
+        #print("queue") 
+        #print(waiting)
+    
         #return the waiting index of the process with a minimum remaining time > 0 : depending on the policy chosen
         switch(policy,
                         srpt_pmtn = 
@@ -80,35 +92,53 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
                           { #we elect the min between the new and current request by comparing their service time
                             if (index >= 2) { 
                               if (S[waiting[index-1]] <= S[waiting[index]]) 
-                              index = (index - 1)
+                                index = (index - 1)
                             }
                           },
                        
                         spt = 
                           { #we elect the first shortest remaining time process, among all the waiting processes
                             min_process = which(remaining==min(remaining[remaining>0], na.rm=T))
-                            index = (which(waiting == min_process))[1]
+                            
+                            #print("spt ")
+                            #print(min_process)
+                            #print(remaining)
+                            
+                            index = (which(waiting == min_process)) #[1]
                           },
                         
                         fifo = 
                           { #we elect the first arrived
-                            if (index >= 1)
-                              index = 1
-                          }
+                            
+                            #print("fifo ")
+                            #print(remaining)
+                            
+                            index = 1
+                          },
+                         {
+                           print ("Default case --> Error")
+                         }
                 )
+
+      
         running <<- waiting[index]        
+    
+        #For some reason multiple process can be pushed in waiting with one call to push function, causing troubles
+        #Moreover this issue, may engage other strange behaviors such as 
+        if (is.na(remaining[running]))
+          remaining[running] <<- min(S[running],remaining[running],na.rm=T)
+    
         waiting <<- waiting[-index] #renvoie le tableau privé de l'element a la position index 
       }
     }
 
     push_task = function() { # insert the next_arrival-th task to the waiting list
                              # and run it if there is preemption
-      if(policy != "spt") {
+      if(policy != "spt" && policy != "fifo") {
         #It is preemptif
         if(!is.na(running)) {
           #if a process is running, we stack him because we are in preemption mode, and then stack also the next arrival. 
           waiting <<- c(waiting,running) #it stacks the current process, if t==t1[next_arrival]
-          #interrupted = rbind(interrupted, data.frame(id=running, when=t, remaining=remaining[running]))
         }
         running <<- NA #We set it to NA as if no process is running
       }
@@ -162,7 +192,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
       }
     }
     
-    list (jobs = data.frame(arrival = t1, completion=t2, service=used, theoricService=S, response=(t2-t1)), 
+    list (jobs = data.frame(arrival = t1, completion=t2, service=used, theoricService=S, response=(t2-t1), wl = waiting_length), 
           sys_vide = sys_vide)
 }    
 
@@ -170,7 +200,6 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy) {
 
 **Question 2** - *Evaluons les performances, en temps de réponse, des différentes stratégies SPRT à la politique FIFO*
 
-Pour une loi exponentielle fixons nous une valeur X = 1
 
 ```{r}
 
@@ -184,29 +213,35 @@ x           = 1
 y           = 1
 policies    = c("srpt_pmtn","spt_pmtn", "spt", "fifo")
 
+laws        = data.frame()
+laws        = rbind(laws, data.frame(name="exp(1,0)", fun="exp", x=1, y=0))
+laws        = rbind(laws, data.frame(name="gamma(4,0.25)", fun="gamma", x=4, y=0.25))
+laws        = rbind(laws, data.frame(name="gamma(0.2,5)", fun="gamma", x=0.2, y=5))
+
 df = data.frame()
-for(policy in policies){ 
-  for(lambda in lambdas) {
-      route=FileLIFO(n, lambda, typeservice="exp", x, y, policy)
-      tmp=route$jobs
-      tmp$mode = policy
-      tmp$lambda = lambda
-      tmp$id=1:length(tmp$arrival)
-      tmp$n = n
-      tmp$sys_vide = route$sys_vide
-      tmp$sys_interrupted=(tmp$n-tmp$sys_vide)
-      df = rbind(df, tmp)
+for(law in 1:nrow(laws)) {
+  for(policy in policies){ 
+    for(lambda in lambdas) {
+        route=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)
+        tmp=route$jobs
+        tmp$mode = policy
+        tmp$lambda = lambda
+        tmp$id=1:length(tmp$arrival)
+        tmp$law = laws[law,]$name
+        tmp$n = n
+        tmp$sys_vide = route$sys_vide
+        tmp$sys_interrupted=(tmp$n-tmp$sys_vide)
+        df = rbind(df, tmp)
+    }
   }
 }
 
-
 library(plyr)
-res = ddply(df, c("mode", "lambda", "n", "sys_vide", "sys_interrupted"), summarize, serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
+res = ddply(df, c("law", "mode", "lambda", "n", "sys_vide", "sys_interrupted"), summarize, serviceM= mean(service), sd_service=sd(service), responseM=mean(response), sd_response=sd(response))
 
 ```
 
 ```{r}
-
 ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) + 
   geom_line() +
   geom_point() + 
@@ -214,6 +249,7 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   geom_vline(xintercept = 1) +
   geom_hline(yintercept = 1) +
   theme_bw() +
+  facet_wrap(~law) +
   xlab("lamba") +
   ylab("Temps de réponse moyen") +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
@@ -227,20 +263,21 @@ Au vu du graphe de la question 2, nous prenons un Lambda de 0.8
 
 ```{r}
 
-ggplot(data=df[df$lambda==0.8,], aes(x = id)) + 
+ggplot(data=df[df$law=="gamma(0.2,5)" & df$lambda==0.8,], aes(x = id)) + 
   geom_bar(stat="identity", position="identity", aes(y=response)) + 
   theme_bw() +
-  xlab("id") +
+  xlab("Requêtes") +
   facet_wrap(~mode) + 
-  ylab("Temps de réponse") +
-  ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
+  ylab("Distribution des temps de réponse") +
+  ggtitle("Distribution des temps de réponse avec lambda = 0.8 pour une loi gamma(0.2,5)")
 
 ```
 
-Rappelons que cces stratégies sont évaluées sur la base d'un même flux de requêtes entrant.
+Rappelons que ces stratégies sont évaluées sur la base d'un même flux de requêtes entrant.
 Sur cette figure nous pouvons remarquer la précense de valeurs extrêmes sur pratiquement chacun des modes.
 
-La politique Fifo traite les requetes dans l'ordre d'arrivé. On constate que ces extremums sont modérés
+La politique Fifo traite les requetes dans l'ordre d'arrivé. On constate que ces extremums sont modérés et stable. 
+La politique quant à elle 
 
 
 ```{r}
