@@ -69,9 +69,13 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy,seed=10) {
 
         index = length(waiting)
         #waiting_length[next_arrival-1] <<- index
-        last_request = waiting[index] #it unstacks the last process received to update its remainning time
         #At first affectation it takes S[running], but after remaining[running] is returned
-        remaining[last_request] <<- min(S[last_request],remaining[last_request],na.rm=T)
+        for(i in 1:length(waiting)) {
+        #For some reason multiple process can be pushed in waiting with one call to push function, causing troubles
+        #Moreover this issue, may engage other strange behaviors such as 
+            request = waiting[i] #it unstacks the last process received to update its remainning time
+            remaining[request] <<- min(S[request],remaining[request],na.rm=T)
+        }
 
         #print("index") 
         #print(length(waiting))
@@ -122,12 +126,6 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy,seed=10) {
 
       
         running <<- waiting[index]        
-    
-        #For some reason multiple process can be pushed in waiting with one call to push function, causing troubles
-        #Moreover this issue, may engage other strange behaviors such as 
-        if (is.na(remaining[running]))
-          remaining[running] <<- min(S[running],remaining[running],na.rm=T)
-    
         waiting <<- waiting[-index] #renvoie le tableau privé de l'element a la position index 
       }
     }
@@ -221,7 +219,7 @@ df = data.frame()
 for(law in 1:nrow(laws)) {
     for(lambda in lambdas) {
       for(policy in policies){ 
-        route=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy, seed=floor(lambda*10))
+        route=FileLIFO(n, lambda, typeservice=as.character(laws[law,]$fun), laws[law,]$x, laws[law,]$y, policy)
         tmp=route$jobs
         tmp$mode = policy
         tmp$lambda = lambda
