@@ -198,6 +198,7 @@ FileLIFO <- function(n,lambda,typeservice,x,y,policy,seed=10) {
 
 **Question 2** - *Evaluons les performances, en temps de réponse, des différentes stratégies SPRT à la politique FIFO*
 
+Maintenant que nous avons à disposition les outils permettant d’analyser les performances pour les différentes politiques, nous pouvons comparer les différentes politiques.
 
 ```{r}
 
@@ -252,6 +253,13 @@ ggplot(data=res, aes(x = lambda, y = responseM, color = mode, shape = mode)) +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
 ```
 
+Selon les résultats ci-dessus, les performances des politiques spt_pmtn et srpt_pmtn sont bien meilleures en comparaison à la politique FIFO. Cela s’explique par le fait que contrairement à la politique FIFO, les autres traitent les activités les plus courtes en premier, ce qui implique que la pile des éléments restants à traiter sera plus petite que si le serveur traitait un service quelconque. En effet, si le serveur s’occupe d’une tâche longue, les tâches plus courtes attendront en parallèle. Si les tâches plus courtes s’exécutent avant, il n’y aura au final que le service plus long qui aura à attendre. Nous avons donc une moyenne de temps de réponse plus faible.
+
+La politique spt_pmtn est légèrement moins efficace que srpt_pmtn, ce qui est logique puisque le temps d’exécution total peut être grand en comparaison aux autres processus alors que le temps restant peut être petit. Nous avons donc quelques processus qui attendent pour rien.
+
+Le cas de la politique spt est proche de spt_pmtn et de srpt_pmtn lorsque le traitement des plus longs processus n’est pas assez grand pour mettre en attente beaucoup de requêtes. Ainsi, lorsque la variance est grande (gamma(0.2,5)), spt est un intermédiaire entre FIFO et spt_pmtn/srpt_pmtn, et se rapproche de ces politiques autrement.
+
+Il est à noter que lorsque la variance est très faible (gamma(4,0.25)), les différences entre les politiques sont très faibles, ce qui est normal puisqu’il y a peu de différence entre l’ordre de traitement optimal et un ordre fifo.
 
 **Question 3** - *Etudions la distribution du temps de réponse et en particulier les valeurs extrêmes*
 
@@ -291,21 +299,15 @@ Au vu du graphe de la question 2, nous prenons un Lambda de 0.8
 
 ```{r}
 
-ggplot(data=df[df$law=="gamma(0.2,5)" & df$lambda==0.8,], aes(x = id)) + 
+ggplot(data=df[df$law=="exp(1,0)" & df$lambda==0.8,], aes(x = id)) + 
   geom_bar(stat="identity", position="identity", aes(y=response)) + 
   theme_bw() +
   xlab("Requêtes") +
   facet_wrap(~mode) + 
   ylab("Distribution des temps de réponse") +
-  ggtitle("Distribution des temps de réponse avec lambda = 0.8 pour une loi gamma(0.2,5)")
+  ggtitle("Temps de réponse avec lambda = 0.8, loi exp(1,0)")
 
 ```
-
-Rappelons que ces stratégies sont évaluées sur la base d'un même flux de requêtes entrant.
-Sur cette figure nous pouvons remarquer la précense de valeurs extrêmes sur pratiquement chacun des modes.
-
-La politique Fifo traite les requetes dans l'ordre d'arrivé. On constate que ces extremums sont modérés et stable. 
-La politique quant à elle 
 
 
 ```{r}
@@ -318,3 +320,11 @@ ggplot(data=df[df$lambda==0.8,], aes(x = id, color = mode, shape = mode)) +
   ggtitle("Influence du taux d'arrivé (lambda) sur le temps de réponse")
 
 ```
+
+Nous pouvons voir qu’en dehors de la politique FIFO, les temps d’exécution sont généralement extrêmement faibles. Cependant, contrairement à la politique FIFO, les quelques temps de réponses qui ne sont pas dans le cas précédent ont un temps de réponse bien plus important. Nous pouvons deviner que ces cas là sont ceux où le temps de service est grand en comparaison aux autres, ils laissent donc la place aux traitements pouvant se faire plus rapidement, ce qui n’est pas le cas lors de la politique FIFO qui traite chaque tâche dans l’ordre d’arrivée.
+
+Les pics sont par ailleurs d’autant plus marqués lors de la politique spt_pmtn. Les tâches les plus longues sont laissées de côté dès qu’une nouvelle tâche arrive peu importe le temps restant du traitement en cours, ce qui augmente significativement son temps de réponse.
+
+**Conclusion** 
+
+En dehors des cas de variance extrêmes proposés par la loi gamma, nous constatons pour une loi exponentielle que les politiques spt, srpt_pmtn et spt_pmtn ont des performances exceptionnelles grâce à un nombre de tâches en attente minimal. Cependant, il ne faut pas oublier qu’en contrepartie, les tâches les plus coûteuses sont traitées uniquement lorsque personne ne leur fait de concurrence. Ainsi, contrairement au FIFO, les politiques spt_pmtn et srpt_pmtn font le choix de ne pas être tout à fait équitable vis-à-vis de ses clients afin d’avoir des résultats moyens optimaux, ce qui est une approche tout à fait valable.
