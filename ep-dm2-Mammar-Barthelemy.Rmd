@@ -302,6 +302,8 @@ Au vu du graphe de la question 2, nous prenons un Lambda de 0.8
 ggplot(data=df[df$law=="exp(1,0)" & df$lambda==0.8,], aes(x = id)) + 
   geom_bar(stat="identity", position="identity", aes(y=response)) + 
   theme_bw() +
+  ylim(0,100) + 
+  #xlim(0, 1) +
   xlab("Requêtes") +
   facet_wrap(~mode) + 
   ylab("Distribution des temps de réponse") +
